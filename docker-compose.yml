@@ -1,0 +1,6 @@
+services:
+  myapp:
+    build: .
+    ports:
+      - "5000:8080"  # Map host port 5000 to container port 8080
+    container_name: myapp-container

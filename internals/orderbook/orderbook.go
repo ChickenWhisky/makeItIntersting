@@ -1,26 +1,28 @@
 package orderbook
 
 import (
-	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
-	"sort"	
+	"sort"
 	"sync"
+
+	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 )
 
 // OrderBook stores order data and handles order processing.
 type OrderBook struct {
-	Asks             map[float64]int
-	Bids             map[float64]int
-	UserOrders       map[string][]models.Contract
-	LastMatchedPrice *float64
-	mu               sync.Mutex
+	Asks              map[float64]int
+	Bids              map[float64]int
+	UserOrders        map[string][]models.Contract
+	LastMatchedPrices []float64
+	mu                sync.Mutex
 }
 
 // NewOrderBook creates a new empty order book.
 func NewOrderBook() *OrderBook {
 	return &OrderBook{
-		Asks:       make(map[float64]int),
-		Bids:       make(map[float64]int),
-		UserOrders: make(map[string][]models.Contract),
+		Asks:              make(map[float64]int),
+		Bids:              make(map[float64]int),
+		UserOrders:        make(map[string][]models.Contract),
+		LastMatchedPrices: make([]float64, 0),
 	}
 }
 
@@ -54,15 +56,27 @@ func (ob *OrderBook) CancelContract(userID, orderType string, price float64) {
 			if contract.OrderType == orderType && contract.Price == price {
 				switch orderType {
 				case "sell":
+					// if ob.Asks[price] >= contract.Quantity{
+					// 	ob.Asks[price] -= contract.Quantity
+					// }
 					ob.Asks[price] -= contract.Quantity
 					if ob.Asks[price] == 0 {
 						delete(ob.Asks, price)
 					}
+					// else if ob.Asks[price] < 0{
+					// 	fmt.Println("Smn wrong in line 63 orderbook.go")
+					// }
 				case "buy":
 					ob.Bids[price] -= contract.Quantity
+					// if ob.Bids[price] >= contract.Quantity{
+					// 	ob.Bids[price] -= contract.Quantity
+					// }
 					if ob.Bids[price] == 0 {
 						delete(ob.Bids, price)
 					}
+					// else if ob.Bids[price] < 0{
+					// 	fmt.Println("Smn wrong in line 71 orderbook.go")
+					// }
 				}
 			} else {
 				remainingContracts = append(remainingContracts, contract)
@@ -78,13 +92,22 @@ func (ob *OrderBook) GetOrderBook() map[string]interface{} {
 	defer ob.mu.Unlock()
 
 	return map[string]interface{}{
-		"asks":              ob.getTopAsks(),
-		"bids":              ob.getTopBids(),
-		"last_matched_price": ob.LastMatchedPrice,
+		"asks":                   ob.getTopAsks(),
+		"bids":                   ob.getTopBids(),
+		"last_matched_price":     ob.LastMatchedPrices[len(ob.LastMatchedPrices)-1],
+		"last_50_matched_prices": getLastNElements(ob.LastMatchedPrices, 100),
 	}
 }
 
 // Helper methods
+
+// getLastNElements returns the last n elements of a slice.
+func getLastNElements(slice []float64, n int) []float64 {
+	if n > len(slice) {
+		n = len(slice)
+	}
+	return slice[len(slice)-n:]
+}
 
 // matchOrders matches the highest bid with the lowest ask.
 func (ob *OrderBook) matchOrders() {
@@ -98,7 +121,7 @@ func (ob *OrderBook) matchOrders() {
 
 		matchedQuantity := min(ob.Asks[lowestAskPrice], ob.Bids[highestBidPrice])
 
-		ob.LastMatchedPrice = &lowestAskPrice
+		ob.LastMatchedPrices = append(ob.LastMatchedPrices, lowestAskPrice)
 		ob.Asks[lowestAskPrice] -= matchedQuantity
 		ob.Bids[highestBidPrice] -= matchedQuantity
 

@@ -1,6 +1,7 @@
 package orderbook
 
 import (
+	"log"
 	"sort"
 	"sync"
 
@@ -34,8 +35,14 @@ func (ob *OrderBook) AddContract(contract models.Contract) {
 	switch contract.OrderType {
 	case "sell":
 		ob.Asks[contract.Price] += contract.Quantity
+		if ob.Asks[contract.Price] < 0 {
+			log.Printf("ERROR: Negative quantity for price %f in Asks: %d", contract.Price, ob.Asks[contract.Price])
+		}
 	case "buy":
 		ob.Bids[contract.Price] += contract.Quantity
+		if ob.Bids[contract.Price] < 0 {
+			log.Printf("ERROR: Negative quantity for price %f in Bids: %d", contract.Price, ob.Bids[contract.Price])
+		}
 	}
 
 	// Store the user's orders

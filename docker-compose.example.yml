@@ -1,0 +1,27 @@
+services:
+  server:
+    env_file: .env
+    build: .
+    ports:
+      - ${HOST_PORT}:8080
+    container_name: server
+
+  mysql-db:
+    image: mysql:latest
+    ports:
+      - ${DB_PORT}:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - ./data/mysql_dev:/data/mysql_db
+    networks:
+      - app-network
+
+volumes:
+  mysqlVolume:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

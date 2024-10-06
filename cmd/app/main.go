@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/ChickenWhisky/makeItIntersting/internals/handlers"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 func main() {
@@ -12,6 +13,7 @@ func main() {
 	// Set up routes from handlers package
 	handlers.SetupRoutes(router)
 
-	// Run the server
-	router.Run(":8080")
+	if err := router.Run(":8080"); err != nil {
+		log.Fatalf("Failed to run the server: %v", err)
+	}
 }

@@ -2,7 +2,7 @@ package orderbook
 
 import (
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
-	"sort"	
+	"sort"
 	"sync"
 )
 
@@ -78,8 +78,8 @@ func (ob *OrderBook) GetOrderBook() map[string]interface{} {
 	defer ob.mu.Unlock()
 
 	return map[string]interface{}{
-		"asks":              ob.getTopAsks(),
-		"bids":              ob.getTopBids(),
+		"asks":               ob.getTopAsks(),
+		"bids":               ob.getTopBids(),
 		"last_matched_price": ob.LastMatchedPrice,
 	}
 }

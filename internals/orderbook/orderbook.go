@@ -99,10 +99,12 @@ func (ob *OrderBook) GetOrderBook() map[string]interface{} {
 	defer ob.mu.Unlock()
 
 	return map[string]interface{}{
+
 		"asks":                   ob.getTopAsks(),
 		"bids":                   ob.getTopBids(),
 		"last_matched_price":     ob.LastMatchedPrices[len(ob.LastMatchedPrices)-1],
 		"last_50_matched_prices": getLastNElements(ob.LastMatchedPrices, 100),
+
 	}
 }
 

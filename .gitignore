@@ -1,2 +1,7 @@
+testing/
+.env
+docker-compose.yml
+build/
 testing/trading_simulation.log
 trading_simulation.log
+

@@ -9,7 +9,7 @@ import (
 )
 
 type OrderBook struct {
-	Asks              map[float64]int
+	Asks              map[float64]int // price,quantity
 	Bids              map[float64]int
 	UserOrders        map[string][]models.Contract
 	LastMatchedPrices []float64
@@ -88,8 +88,8 @@ func (ob *OrderBook) CancelContract(userID, orderType string, price float64) {
 }
 
 func (ob *OrderBook) GetOrderBook() map[string]interface{} {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
+	// ob.mu.Lock()
+	// defer ob.mu.Unlock()
 
 	return map[string]interface{}{
 
@@ -97,7 +97,6 @@ func (ob *OrderBook) GetOrderBook() map[string]interface{} {
 		"bids":                   ob.getTopBids(),
 		"last_matched_price":     ob.LastMatchedPrices[len(ob.LastMatchedPrices)-1],
 		"last_50_matched_prices": getLastNElements(ob.LastMatchedPrices, 100),
-
 	}
 }
 
@@ -111,27 +110,48 @@ func getLastNElements(slice []float64, n int) []float64 {
 }
 
 func (ob *OrderBook) matchOrders() {
-	for len(ob.Asks) > 0 && len(ob.Bids) > 0 {
-		lowestAskPrice := ob.getLowestAskPrice()
-		highestBidPrice := ob.getHighestBidPrice()
+	// go through bids, check for some price in bids does that price exists in asks?
+	// match min(bids[price].quantity,asks[price].quatity)
 
-		if highestBidPrice < lowestAskPrice {
-			break
+	for price, bidQuatity := range ob.Bids {
+		// check for match
+		askQuatity, exists := ob.Asks[price]
+		if exists {
+			ob.Asks[price] -= min(bidQuatity, askQuatity)
+			ob.Bids[price] -= min(bidQuatity, askQuatity)
+			ob.LastMatchedPrices = append(ob.LastMatchedPrices, price)
+
+			// if its zero then delete
+			if ob.Asks[price] == 0 {
+				delete(ob.Asks, price)
+			}
+			if ob.Bids[price] == 0 {
+				delete(ob.Bids, price)
+			}
 		}
 
-		matchedQuantity := min(ob.Asks[lowestAskPrice], ob.Bids[highestBidPrice])
-
-		ob.LastMatchedPrices = append(ob.LastMatchedPrices, lowestAskPrice)
-		ob.Asks[lowestAskPrice] -= matchedQuantity
-		ob.Bids[highestBidPrice] -= matchedQuantity
-
-		if ob.Asks[lowestAskPrice] == 0 {
-			delete(ob.Asks, lowestAskPrice)
-		}
-		if ob.Bids[highestBidPrice] == 0 {
-			delete(ob.Bids, highestBidPrice)
-		}
 	}
+
+	// for len(ob.Asks) > 0 && len(ob.Bids) > 0 {
+	// 	lowestAskPrice := ob.getLowestAskPrice()
+	// 	highestBidPrice := ob.getHighestBidPrice()
+
+	// 	if highestBidPrice < lowestAskPrice {
+	// 		break
+	// 	}
+
+	// 	matchedQuantity := min(ob.Asks[lowestAskPrice], ob.Bids[highestBidPrice])
+
+	// 	ob.Asks[lowestAskPrice] -= matchedQuantity
+	// 	ob.Bids[highestBidPrice] -= matchedQuantity
+
+	// 	if ob.Asks[lowestAskPrice] == 0 {
+	// 		delete(ob.Asks, lowestAskPrice)
+	// 	}
+	// 	if ob.Bids[highestBidPrice] == 0 {
+	// 		delete(ob.Bids, highestBidPrice)
+	// 	}
+	// }
 }
 
 func (ob *OrderBook) getLowestAskPrice() float64 {

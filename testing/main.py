@@ -3,12 +3,10 @@ import requests
 import json
 import logging
 
-#TODO: fix actual match match making of orders 
-
 API_URL = "http://localhost:8080/order"
 ORDERBOOK_URL = "http://localhost:8080/orderbook"
 
-# Random values range
+# Configure logging
 logging.basicConfig(
     filename='trading_simulation.log',
     level=logging.INFO,
@@ -35,6 +33,9 @@ def simulate_trading():
     # - A buy order for 100 units at a price of 20
     # - A sell order of 1000 units at a price of 20
     # - A buy order for 50 units at a price of 100
+    # - A sell order for 100 units at price 30
+    # - A buy order for 20 units at price 100
+    # - A buy order for 100 units at price 30
 
     # Order 1: Sell 1100 units at price 100
     sell_order_1 = {
@@ -72,20 +73,33 @@ def simulate_trading():
     }
     send_post_request(buy_order_2)
 
+    # New Orders:
+    # Order 5: Sell 100 units at price 30
+    sell_order_3 = {
+        "user_id": "5",  # Another example user ID
+        "order_type": "sell",
+        "price": 30,
+        "quantity": 100
+    }
+    send_post_request(sell_order_3)
+
+    # Order 6: Buy 20 units at price 100
+    buy_order_3 = {
+        "user_id": "6",  # Another example user ID
+        "order_type": "buy",
+        "price": 100,
+        "quantity": 20
+    }
+    send_post_request(buy_order_3)
+
+    # Order 7: Buy 100 units at price 30
+    buy_order_4 = {
+        "user_id": "7",  # Another example user ID
+        "order_type": "buy",
+        "price": 30,
+        "quantity": 100
+    }
+    send_post_request(buy_order_4)
+
 if __name__ == "__main__":
     simulate_trading()
-# {
-#   "asks": [
-#     {
-#       "price": 20,
-#       "quantity": 850
-#     },
-#     {
-#       "price": 100,
-#       "quantity": 1100
-#     }
-#   ],
-#   "bids": null,
-#   "last_50_matched_prices": [20, 20],
-#   "last_matched_price": 20
-# }

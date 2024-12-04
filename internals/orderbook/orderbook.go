@@ -8,7 +8,6 @@ import (
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 )
 
-// OrderBook stores order data and handles order processing.
 type OrderBook struct {
 	Asks              map[float64]int
 	Bids              map[float64]int
@@ -17,7 +16,6 @@ type OrderBook struct {
 	mu                sync.Mutex
 }
 
-// NewOrderBook creates a new empty order book.
 func NewOrderBook() *OrderBook {
 	return &OrderBook{
 		Asks:              make(map[float64]int),
@@ -27,7 +25,6 @@ func NewOrderBook() *OrderBook {
 	}
 }
 
-// AddContract adds a new contract (order) to the order book and attempts to match orders.
 func (ob *OrderBook) AddContract(contract models.Contract) {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
@@ -45,14 +42,11 @@ func (ob *OrderBook) AddContract(contract models.Contract) {
 		}
 	}
 
-	// Store the user's orders
 	ob.UserOrders[contract.UserID] = append(ob.UserOrders[contract.UserID], contract)
 
-	// Attempt to match orders after adding a new one
 	ob.matchOrders()
 }
 
-// CancelContract cancels a specific user's contract.
 func (ob *OrderBook) CancelContract(userID, orderType string, price float64) {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
@@ -93,7 +87,6 @@ func (ob *OrderBook) CancelContract(userID, orderType string, price float64) {
 	}
 }
 
-// GetOrderBook returns the current state of the order book.
 func (ob *OrderBook) GetOrderBook() map[string]interface{} {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
@@ -110,7 +103,6 @@ func (ob *OrderBook) GetOrderBook() map[string]interface{} {
 
 // Helper methods
 
-// getLastNElements returns the last n elements of a slice.
 func getLastNElements(slice []float64, n int) []float64 {
 	if n > len(slice) {
 		n = len(slice)
@@ -118,7 +110,6 @@ func getLastNElements(slice []float64, n int) []float64 {
 	return slice[len(slice)-n:]
 }
 
-// matchOrders matches the highest bid with the lowest ask.
 func (ob *OrderBook) matchOrders() {
 	for len(ob.Asks) > 0 && len(ob.Bids) > 0 {
 		lowestAskPrice := ob.getLowestAskPrice()
@@ -143,7 +134,6 @@ func (ob *OrderBook) matchOrders() {
 	}
 }
 
-// getLowestAskPrice returns the lowest ask price.
 func (ob *OrderBook) getLowestAskPrice() float64 {
 	var prices []float64
 	for price := range ob.Asks {
@@ -153,7 +143,6 @@ func (ob *OrderBook) getLowestAskPrice() float64 {
 	return prices[0]
 }
 
-// getHighestBidPrice returns the highest bid price.
 func (ob *OrderBook) getHighestBidPrice() float64 {
 	var prices []float64
 	for price := range ob.Bids {
@@ -163,7 +152,6 @@ func (ob *OrderBook) getHighestBidPrice() float64 {
 	return prices[0]
 }
 
-// getTopAsks returns the top 5 asks with total quantity.
 func (ob *OrderBook) getTopAsks() []map[string]interface{} {
 	var asks []map[string]interface{}
 	var prices []float64
@@ -178,7 +166,6 @@ func (ob *OrderBook) getTopAsks() []map[string]interface{} {
 	return asks
 }
 
-// getTopBids returns the top 5 bids with total quantity.
 func (ob *OrderBook) getTopBids() []map[string]interface{} {
 	var bids []map[string]interface{}
 	var prices []float64
@@ -193,7 +180,7 @@ func (ob *OrderBook) getTopBids() []map[string]interface{} {
 	return bids
 }
 
-// min returns the minimum of two integers.
+// why not std::min() ??
 func min(a, b int) int {
 	if a < b {
 		return a

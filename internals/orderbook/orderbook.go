@@ -1,31 +1,38 @@
 package orderbook
 
 import (
+	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
+	"github.com/emirpasic/gods/queues/priorityqueue"
 	"log"
 	"sort"
 	"sync"
-	// pq "github.com/emirpasic/gods/queues/priorityqueue"
-	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
-	// "github.com/emirpasic/gods/utils"
-
 )
 
 // OrderBook stores order data and handles order processing.
 type OrderBook struct {
-	Asks              map[float64]int
-	Bids              map[float64]int
+	Asks              *priorityqueue.Queue
+	Bids              *priorityqueue.Queue
+	LimitOrderAsks    *priorityqueue.Queue
+	LimitOrderBids    *priorityqueue.Queue
 	UserOrders        map[string][]models.Contract
 	LastMatchedPrices []float64
 	mu                sync.Mutex
 }
 
 // NewOrderBook creates a new empty order book.
+
+// Will try to implement order book in a better manner
+
 func NewOrderBook() *OrderBook {
 	return &OrderBook{
-		Asks:              make(map[float64]int),
-		Bids:              make(map[float64]int),
-		UserOrders:        make(map[string][]models.Contract),
-		LastMatchedPrices: make([]float64, 0),
+		Asks:                   priorityqueue.NewWith(ForAsks),
+		Bids:                   priorityqueue.NewWith(ForBids),
+		LimitOrderAsks:         priorityqueue.NewWith(),
+		LimitOrderBids:         make(map[float64]*priorityqueue.Queue),
+		PricesInLimitOrderAsks: priorityqueue.NewWith(ForAsks),
+		PricesInLimitOrderBids: priorityqueue.NewWith(ForAsks),
+		UserOrders:             make(map[string][]models.Contract),
+		LastMatchedPrices:      make([]float64, 0),
 	}
 }
 
@@ -120,48 +127,70 @@ func getLastNElements(slice []float64, n int) []float64 {
 
 // matchOrders matches the highest bid with the lowest ask.
 func (ob *OrderBook) matchOrders() {
-	for len(ob.Asks) > 0 && len(ob.Bids) > 0 {
-		lowestAskPrice := ob.getLowestAskPrice()
-		highestBidPrice := ob.getHighestBidPrice()
 
-		if highestBidPrice < lowestAskPrice {
+	for ob.Asks.Size() > 0 && ob.Bids.Size() > 0 {
+		// Peek top ask and bid
+		topAskInterface, askOk := ob.Asks.Peek()
+		topBidInterface, bidOk := ob.Bids.Peek()
+
+		if !askOk || !bidOk {
 			break
 		}
 
-		matchedQuantity := min(ob.Asks[lowestAskPrice], ob.Bids[highestBidPrice])
+		topAsk := topAskInterface.(*models.Contract)
+		topBid := topBidInterface.(*models.Contract)
 
-		ob.LastMatchedPrices = append(ob.LastMatchedPrices, lowestAskPrice)
-		ob.Asks[lowestAskPrice] -= matchedQuantity
-		ob.Bids[highestBidPrice] -= matchedQuantity
+		// Determine matching quantity
+		matchQuantity := min(topAsk.Quantity, topBid.Quantity)
 
-		if ob.Asks[lowestAskPrice] == 0 {
-			delete(ob.Asks, lowestAskPrice)
+		// Update order quantities
+		topAsk.Quantity -= matchQuantity
+		topBid.Quantity -= matchQuantity
+
+		// Record matched price
+		ob.LastMatchedPrices = append(ob.LastMatchedPrices, topAsk.Price)
+
+		// Remove fully matched orders
+		if topAsk.Quantity == 0 {
+			ob.Asks.Dequeue()
+			ob.removeLimitOrder(&topAsk.Price, topAsk, ob.LimitOrderAsks)
 		}
-		if ob.Bids[highestBidPrice] == 0 {
-			delete(ob.Bids, highestBidPrice)
+		if topBid.Quantity == 0 {
+			ob.Bids.Dequeue()
+			ob.removeLimitOrder(&topBid.Price, topBid, ob.LimitOrderBids)
 		}
+	}
+}
+
+// Helper to remove a specific order from limit order queue
+func (ob *OrderBook) removeLimitOrder(price *float64, contract *models.Contract, limitOrders map[float64]*priorityqueue.Queue) {
+	// Get the queue for this price level
+	priceQueue := limitOrders[*price]
+
+	// Create a new queue to store remaining orders
+	newQueue := priorityqueue.New()
+
+	// Iterate through the existing queue
+	for !priceQueue.Empty() {
+		currentContract, _ := priceQueue.Dequeue()
+
+		// Add back all contracts except the one to be removed
+		if currentContract.(*models.Contract) != contract {
+			newQueue.Enqueue(currentContract)
+		}
+	}
+
+	// Replace the old queue with the new one
+	if newQueue.Empty() {
+		delete(limitOrders, *price)
+	} else {
+		limitOrders[*price] = newQueue
 	}
 }
 
 // getLowestAskPrice returns the lowest ask price.
-func (ob *OrderBook) getLowestAskPrice() float64 {
-	var prices []float64
-	for price := range ob.Asks {
-		prices = append(prices, price)
-	}
-	sort.Float64s(prices)
-	return prices[0]
-}
 
 // getHighestBidPrice returns the highest bid price.
-func (ob *OrderBook) getHighestBidPrice() float64 {
-	var prices []float64
-	for price := range ob.Bids {
-		prices = append(prices, price)
-	}
-	sort.Sort(sort.Reverse(sort.Float64Slice(prices)))
-	return prices[0]
-}
 
 // getTopAsks returns the top 5 asks with total quantity.
 func (ob *OrderBook) getTopAsks() []map[string]interface{} {

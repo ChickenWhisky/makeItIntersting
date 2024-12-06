@@ -12,8 +12,7 @@ type OrderBook struct {
 	Bids              *priorityqueue.Queue
 	LimitOrderAsks    *priorityqueue.Queue
 	LimitOrderBids    *priorityqueue.Queue
-	IncomingAsks      chan Contract
-	IncomingBids      chan Contract
+	IncomingContracts chan Contract
 	UserOrders        map[string][]Contract
 	LastMatchedPrices []float64
 	mu                sync.Mutex

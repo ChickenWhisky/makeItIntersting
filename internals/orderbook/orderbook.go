@@ -17,8 +17,7 @@ func NewOrderBook() *models.OrderBook {
 		Bids:              priorityqueue.NewWith(ForBids),
 		LimitOrderAsks:    priorityqueue.NewWith(ForLimitOrdersAsk),
 		LimitOrderBids:    priorityqueue.NewWith(ForLimitOrdersBid),
-		IncomingAsks:      make(chan models.Contract),
-		IncomingBids:      make(chan models.Contract),
+		IncomingContracts: make(chan models.Contract),
 		UserOrders:        make(map[string][]models.Contract),
 		LastMatchedPrices: make([]float64, 0),
 	}

@@ -5,41 +5,28 @@ import (
 	"github.com/emirpasic/gods/queues/priorityqueue"
 	"log"
 	"sort"
-	"sync"
 )
-
-// OrderBook stores order data and handles order processing.
-type OrderBook struct {
-	Asks              *priorityqueue.Queue
-	Bids              *priorityqueue.Queue
-	LimitOrderAsks    *priorityqueue.Queue
-	LimitOrderBids    *priorityqueue.Queue
-	UserOrders        map[string][]models.Contract
-	LastMatchedPrices []float64
-	mu                sync.Mutex
-}
 
 // NewOrderBook creates a new empty order book.
 
 // Will try to implement order book in a better manner
 
-func NewOrderBook() *OrderBook {
-	return &OrderBook{
-		Asks:                   priorityqueue.NewWith(ForAsks),
-		Bids:                   priorityqueue.NewWith(ForBids),
-		LimitOrderAsks:         priorityqueue.NewWith(),
-		LimitOrderBids:         make(map[float64]*priorityqueue.Queue),
-		PricesInLimitOrderAsks: priorityqueue.NewWith(ForAsks),
-		PricesInLimitOrderBids: priorityqueue.NewWith(ForAsks),
-		UserOrders:             make(map[string][]models.Contract),
-		LastMatchedPrices:      make([]float64, 0),
+func NewOrderBook() *models.OrderBook {
+	return &models.OrderBook{
+		Asks:              priorityqueue.NewWith(ForAsks),
+		Bids:              priorityqueue.NewWith(ForBids),
+		LimitOrderAsks:    priorityqueue.NewWith(ForLimitOrdersAsk),
+		LimitOrderBids:    priorityqueue.NewWith(ForLimitOrdersBid),
+		IncomingAsks:      make(chan models.Contract),
+		IncomingBids:      make(chan models.Contract),
+		UserOrders:        make(map[string][]models.Contract),
+		LastMatchedPrices: make([]float64, 0),
 	}
 }
 
 // AddContract adds a new contract (order) to the order book and attempts to match orders.
-func (ob *OrderBook) AddContract(contract models.Contract) {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
+
+func (ob *models.OrderBook) AddContract(contract models.Contract) {
 
 	switch contract.OrderType {
 	case "sell":
@@ -62,7 +49,7 @@ func (ob *OrderBook) AddContract(contract models.Contract) {
 }
 
 // CancelContract cancels a specific user's contract.
-func (ob *OrderBook) CancelContract(userID, orderType string, price float64) {
+func (ob *models.OrderBook) CancelContract(userID, orderType string, price float64) {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
 
@@ -103,7 +90,7 @@ func (ob *OrderBook) CancelContract(userID, orderType string, price float64) {
 }
 
 // GetOrderBook returns the current state of the order book.
-func (ob *OrderBook) GetOrderBook() map[string]interface{} {
+func (ob *models.OrderBook) GetOrderBook() map[string]interface{} {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
 
@@ -126,7 +113,7 @@ func getLastNElements(slice []float64, n int) []float64 {
 }
 
 // matchOrders matches the highest bid with the lowest ask.
-func (ob *OrderBook) matchOrders() {
+func (ob *models.OrderBook) matchOrders() {
 
 	for ob.Asks.Size() > 0 && ob.Bids.Size() > 0 {
 		// Peek top ask and bid
@@ -163,7 +150,7 @@ func (ob *OrderBook) matchOrders() {
 }
 
 // Helper to remove a specific order from limit order queue
-func (ob *OrderBook) removeLimitOrder(price *float64, contract *models.Contract, limitOrders map[float64]*priorityqueue.Queue) {
+func (ob *models.OrderBook) removeLimitOrder(price *float64, contract *models.Contract, limitOrders map[float64]*priorityqueue.Queue) {
 	// Get the queue for this price level
 	priceQueue := limitOrders[*price]
 
@@ -193,7 +180,7 @@ func (ob *OrderBook) removeLimitOrder(price *float64, contract *models.Contract,
 // getHighestBidPrice returns the highest bid price.
 
 // getTopAsks returns the top 5 asks with total quantity.
-func (ob *OrderBook) getTopAsks() []map[string]interface{} {
+func (ob *models.OrderBook) getTopAsks() []map[string]interface{} {
 	var asks []map[string]interface{}
 	var prices []float64
 	for price := range ob.Asks {
@@ -208,7 +195,7 @@ func (ob *OrderBook) getTopAsks() []map[string]interface{} {
 }
 
 // getTopBids returns the top 5 bids with total quantity.
-func (ob *OrderBook) getTopBids() []map[string]interface{} {
+func (ob *models.OrderBook) getTopBids() []map[string]interface{} {
 	var bids []map[string]interface{}
 	var prices []float64
 	for price := range ob.Bids {

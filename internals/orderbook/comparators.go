@@ -5,9 +5,9 @@ import (
 	"github.com/emirpasic/gods/utils"
 )
 
-func ForAsks(a, b interface{}) int {
-	contractA := a.(*models.Contract)
-	contractB := b.(*models.Contract)
+func ForAsksLevelByLevel(a, b interface{}) int {
+	contractA := a.(*Level)
+	contractB := b.(*Level)
 
 	if contractA.Price < contractB.Price {
 		return -1
@@ -15,20 +15,11 @@ func ForAsks(a, b interface{}) int {
 	if contractA.Price > contractB.Price {
 		return 1
 	}
-
-	// If prices are equal, prioritize earlier timestamp
-	if contractA.Timestamp < contractB.Timestamp {
-		return -1
-	}
-	if contractA.Timestamp > contractB.Timestamp {
-		return 1
-	}
-
 	return 0
 }
-func ForBids(a, b interface{}) int {
-	contractA := a.(*models.Contract)
-	contractB := b.(*models.Contract)
+func ForBidsLevelByLevel(a, b interface{}) int {
+	contractA := a.(*Level)
+	contractB := b.(*Level)
 
 	if contractA.Price > contractB.Price {
 		return -1
@@ -36,15 +27,6 @@ func ForBids(a, b interface{}) int {
 	if contractA.Price < contractB.Price {
 		return 1
 	}
-
-	// If prices are equal, prioritize earlier timestamp
-	if contractA.Timestamp < contractB.Timestamp {
-		return -1
-	}
-	if contractA.Timestamp > contractB.Timestamp {
-		return 1
-	}
-
 	return 0
 }
 func ForLimitOrdersAsk(a, b interface{}) int {

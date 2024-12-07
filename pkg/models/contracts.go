@@ -2,7 +2,7 @@ package models
 
 // Contract struct represents an order (buy/sell)
 type Contract struct {
-	Contract_ID string  `json:"contract_id"`
+	ContractID  string  `json:"contract_id"`
 	UserID      string  `json:"user_id"`
 	RequestType string  `json:"request_type"`
 	OrderType   string  `json:"order_type"`

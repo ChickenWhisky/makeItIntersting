@@ -18,26 +18,26 @@ import (
 type Level struct {
 	Price         float32                    // Price at that Level
 	Type          bool                       // Ask(0) or Bid(1) for setting up the comparator for the hashmap
-	NoOfContracts int32                      // If 0 then simply delete struct from parent hashmap
+	NoOfContracts int64                      // If 0 then simply delete struct from parent hashmap
 	Orders        *priorityqueue.Queue       // Meant to keep order of contracts based on TimeStamps
 	Contracts     map[string]models.Contract // Keep track of contracts in order to get instant data
 	ToBeDeleted   arrayqueue.Queue           // For tracking what needs to be deleted
 }
 
 type OrderBook struct {
-	AsksLevelByLevel             *priorityqueue.Queue             // To keep track of orders simply by price level and not on a order basis
-	BidsLevelByLevel             *priorityqueue.Queue             // Same except for Bids
-	AsksOrderByOrder             map[float32]*priorityqueue.Queue // To be able to extract orders on a contract by contract basis
-	BidsOrderByOrder             map[float32]*priorityqueue.Queue // Same except for Bids
-	LimitOrderAsksLevelByLevel   *priorityqueue.Queue             // To keep track of Limit Orders based ordered by Prices and further by time stamps so
-	LimitOrderBidsLevelByLevel   *priorityqueue.Queue             //
-	AsksOrderByOrderLevelByLevel map[float32]*priorityqueue.Queue // To be able to extract orders on a contract by contract basis
-	BidsOrderByOrderLevelByLevel map[float32]*priorityqueue.Queue // Same except for Bids
-	IncomingContracts            chan models.Contract             // Channel to stream incoming orders
-	UserOrders                   map[string][]models.Contract     // A map to extract any existing order
-	ToBeDeletedOrders            arrayqueue.Queue                 // A map to keep track of
-	LastMatchedPrices            []float32
-	mu                           sync.Mutex
+	AsksLevelByLevel           *priorityqueue.Queue             // To keep track of orders simply by price level and not on a order basis
+	BidsLevelByLevel           *priorityqueue.Queue             // Same except for Bids
+	AsksOrderByOrder           map[float32]*priorityqueue.Queue // To be able to extract orders on a contract by contract basis
+	BidsOrderByOrder           map[float32]*priorityqueue.Queue // Same except for Bids
+	LimitOrderAsksLevelByLevel *priorityqueue.Queue             // To keep track of Limit Orders based ordered by Prices and further by time stamps so
+	LimitOrderBidsLevelByLevel *priorityqueue.Queue             // Same except for Limit Order Bids
+	LimitAsksOrderByOrder      map[float32]*priorityqueue.Queue // To be able to extract orders on a contract by contract basis
+	LimitBidsOrderByOrder      map[float32]*priorityqueue.Queue // Same except for Limit Order Bids
+	IncomingContracts          chan models.Contract             // Channel to stream incoming orders
+	UserOrders                 map[string][]models.Contract     // A map to extract any existing order
+	ToBeDeletedOrders          chan models.Contract             // A map to keep track of
+	LastMatchedPrices          []float32
+	mu                         sync.Mutex
 }
 
 // NewOrderBook creates a new empty order book.
@@ -46,13 +46,19 @@ type OrderBook struct {
 
 func NewOrderBook() *OrderBook {
 	ob := &OrderBook{
-		Asks:                       priorityqueue.NewWith(ForAsks),
-		Bids:                       priorityqueue.NewWith(ForBids),
+		AsksLevelByLevel:           priorityqueue.NewWith(ForAsksLevelByLevel),
+		BidsLevelByLevel:           priorityqueue.NewWith(ForBidsLevelByLevel),
+		AsksOrderByOrder:           make(map[float32]*priorityqueue.Queue),
+		BidsOrderByOrder:           make(map[float32]*priorityqueue.Queue),
 		LimitOrderAsksLevelByLevel: priorityqueue.NewWith(ForLimitOrdersAsk),
 		LimitOrderBidsLevelByLevel: priorityqueue.NewWith(ForLimitOrdersBid),
+		LimitAsksOrderByOrder:      make(map[float32]*priorityqueue.Queue),
+		LimitBidsOrderByOrder:      make(map[float32]*priorityqueue.Queue),
 		IncomingContracts:          make(chan models.Contract),
 		UserOrders:                 make(map[string][]models.Contract),
+		ToBeDeletedOrders:          make(chan models.Contract),
 		LastMatchedPrices:          make([]float32, 0),
+		mu:                         sync.Mutex{},
 	}
 	ob.StartProcessing()
 	return ob
@@ -88,8 +94,8 @@ func (ob *OrderBook) AddContract(contract models.Contract) {
 			if err != nil {
 				log.Println("Error converting CONTRACT_ID_LENGTH to int")
 			}
-			contract.Contract_ID = helpers.GenerateRandomString(lengthFromEnv)
-			ob.Asks.Enqueue(contract)
+			contract.ContractID = helpers.GenerateRandomString(lengthFromEnv)
+			ob.AddContractToAsk(contract)
 		}
 	case "buy":
 		{
@@ -98,7 +104,7 @@ func (ob *OrderBook) AddContract(contract models.Contract) {
 			if err != nil {
 				log.Println("Error converting CONTRACT_ID_LENGTH to int")
 			}
-			contract.Contract_ID = helpers.GenerateRandomString(lengthFromEnv)
+			contract.ContractID = helpers.GenerateRandomString(lengthFromEnv)
 			ob.Bids.Enqueue(contract)
 		}
 	case "limit_buy":
@@ -112,6 +118,11 @@ func (ob *OrderBook) AddContract(contract models.Contract) {
 
 	// Attempt to match orders after adding a new one
 	ob.matchOrders()
+}
+func (ob *OrderBook) AddContractToAsk(contract models.Contract) {
+
+	orderPrice := contract.Price
+
 }
 
 // CancelContract cancels a specific user's contract.
@@ -133,7 +144,6 @@ func (ob *OrderBook) CancelContract(contract models.Contract) {
 						delete(ob.Asks, price)
 					}
 					// else if ob.Asks[price] < 0{
-					// 	fmt.Println("Smn wrong in line 63 orderbook.go")
 					// }
 				case "buy":
 					ob.Bids[price] -= contract.Quantity
@@ -144,7 +154,6 @@ func (ob *OrderBook) CancelContract(contract models.Contract) {
 						delete(ob.Bids, price)
 					}
 					// else if ob.Bids[price] < 0{
-					// 	fmt.Println("Smn wrong in line 71 orderbook.go")
 					// }
 				}
 			} else {

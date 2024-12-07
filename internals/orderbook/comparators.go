@@ -6,8 +6,8 @@ import (
 )
 
 func ForAsksLevelByLevel(a, b interface{}) int {
-	contractA := a.(*Level)
-	contractB := b.(*Level)
+	contractA := a.(*LevelBook)
+	contractB := b.(*LevelBook)
 
 	if contractA.Price < contractB.Price {
 		return -1
@@ -18,8 +18,8 @@ func ForAsksLevelByLevel(a, b interface{}) int {
 	return 0
 }
 func ForBidsLevelByLevel(a, b interface{}) int {
-	contractA := a.(*Level)
-	contractB := b.(*Level)
+	contractA := a.(*LevelBook)
+	contractB := b.(*LevelBook)
 
 	if contractA.Price > contractB.Price {
 		return -1
@@ -38,4 +38,10 @@ func ForLimitOrdersBid(a, b interface{}) int {
 	priorityA := a.(models.LimitOrderTracker).Price
 	priorityB := b.(models.LimitOrderTracker).Price
 	return utils.IntComparator(priorityA, priorityB)
+}
+
+func TimeBased(a, b interface{}) int {
+	timeA := a.(models.Contract).Timestamp
+	timeB := b.(models.Contract).Timestamp
+	return utils.IntComparator(timeA, timeB)
 }

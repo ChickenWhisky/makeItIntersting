@@ -1,43 +1,110 @@
 package orderbook
 
 import (
+	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
+	"github.com/emirpasic/gods/queues/arrayqueue"
 	"github.com/emirpasic/gods/queues/priorityqueue"
+	_ "github.com/joho/godotenv/autoload"
 	"log"
+	"os"
 	"sort"
+	"strconv"
+	"sync"
 )
+
+// OrderBook stores order data and handles order processing.
+
+type Level struct {
+	Price         float32                    // Price at that Level
+	Type          bool                       // Ask(0) or Bid(1) for setting up the comparator for the hashmap
+	NoOfContracts int32                      // If 0 then simply delete struct from parent hashmap
+	Orders        *priorityqueue.Queue       // Meant to keep order of contracts based on TimeStamps
+	Contracts     map[string]models.Contract // Keep track of contracts in order to get instant data
+	ToBeDeleted   arrayqueue.Queue           // For tracking what needs to be deleted
+}
+
+type OrderBook struct {
+	AsksLevelByLevel             *priorityqueue.Queue             // To keep track of orders simply by price level and not on a order basis
+	BidsLevelByLevel             *priorityqueue.Queue             // Same except for Bids
+	AsksOrderByOrder             map[float32]*priorityqueue.Queue // To be able to extract orders on a contract by contract basis
+	BidsOrderByOrder             map[float32]*priorityqueue.Queue // Same except for Bids
+	LimitOrderAsksLevelByLevel   *priorityqueue.Queue             // To keep track of Limit Orders based ordered by Prices and further by time stamps so
+	LimitOrderBidsLevelByLevel   *priorityqueue.Queue             //
+	AsksOrderByOrderLevelByLevel map[float32]*priorityqueue.Queue // To be able to extract orders on a contract by contract basis
+	BidsOrderByOrderLevelByLevel map[float32]*priorityqueue.Queue // Same except for Bids
+	IncomingContracts            chan models.Contract             // Channel to stream incoming orders
+	UserOrders                   map[string][]models.Contract     // A map to extract any existing order
+	ToBeDeletedOrders            arrayqueue.Queue                 // A map to keep track of
+	LastMatchedPrices            []float32
+	mu                           sync.Mutex
+}
 
 // NewOrderBook creates a new empty order book.
 
 // Will try to implement order book in a better manner
 
-func NewOrderBook() *models.OrderBook {
-	return &models.OrderBook{
-		Asks:              priorityqueue.NewWith(ForAsks),
-		Bids:              priorityqueue.NewWith(ForBids),
-		LimitOrderAsks:    priorityqueue.NewWith(ForLimitOrdersAsk),
-		LimitOrderBids:    priorityqueue.NewWith(ForLimitOrdersBid),
-		IncomingContracts: make(chan models.Contract),
-		UserOrders:        make(map[string][]models.Contract),
-		LastMatchedPrices: make([]float64, 0),
+func NewOrderBook() *OrderBook {
+	ob := &OrderBook{
+		Asks:                       priorityqueue.NewWith(ForAsks),
+		Bids:                       priorityqueue.NewWith(ForBids),
+		LimitOrderAsksLevelByLevel: priorityqueue.NewWith(ForLimitOrdersAsk),
+		LimitOrderBidsLevelByLevel: priorityqueue.NewWith(ForLimitOrdersBid),
+		IncomingContracts:          make(chan models.Contract),
+		UserOrders:                 make(map[string][]models.Contract),
+		LastMatchedPrices:          make([]float32, 0),
 	}
+	ob.StartProcessing()
+	return ob
+}
+
+//  Starts up a thread that continuously checks the channel for new contracts to process
+
+func (ob *OrderBook) StartProcessing() {
+	go func() {
+		for contract := range ob.IncomingContracts {
+			switch contract.RequestType {
+			case "add":
+				ob.AddContract(contract)
+			case "delete":
+				ob.CancelContract(contract)
+			}
+		}
+	}()
 }
 
 // AddContract adds a new contract (order) to the order book and attempts to match orders.
 
-func (ob *models.OrderBook) AddContract(contract models.Contract) {
+func (ob *OrderBook) AddContract(contract models.Contract) {
+
+	//ob.mu.Lock()
+	//defer ob.mu.Unlock()
 
 	switch contract.OrderType {
 	case "sell":
-		ob.Asks[contract.Price] += contract.Quantity
-		if ob.Asks[contract.Price] < 0 {
-			log.Printf("ERROR: Negative quantity for price %f in Asks: %d", contract.Price, ob.Asks[contract.Price])
+		{
+
+			lengthFromEnv, err := strconv.Atoi(os.Getenv("CONTRACT_ID_LENGTH"))
+			if err != nil {
+				log.Println("Error converting CONTRACT_ID_LENGTH to int")
+			}
+			contract.Contract_ID = helpers.GenerateRandomString(lengthFromEnv)
+			ob.Asks.Enqueue(contract)
 		}
 	case "buy":
-		ob.Bids[contract.Price] += contract.Quantity
-		if ob.Bids[contract.Price] < 0 {
-			log.Printf("ERROR: Negative quantity for price %f in Bids: %d", contract.Price, ob.Bids[contract.Price])
+		{
+
+			lengthFromEnv, err := strconv.Atoi(os.Getenv("CONTRACT_ID_LENGTH"))
+			if err != nil {
+				log.Println("Error converting CONTRACT_ID_LENGTH to int")
+			}
+			contract.Contract_ID = helpers.GenerateRandomString(lengthFromEnv)
+			ob.Bids.Enqueue(contract)
 		}
+	case "limit_buy":
+		ob.LimitOrderBidsLevelByLevel.Enqueue(contract)
+	case "limit_sell":
+		ob.LimitOrderAsksLevelByLevel.Enqueue(contract)
 	}
 
 	// Store the user's orders
@@ -48,9 +115,12 @@ func (ob *models.OrderBook) AddContract(contract models.Contract) {
 }
 
 // CancelContract cancels a specific user's contract.
-func (ob *models.OrderBook) CancelContract(userID, orderType string, price float64) {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
+func (ob *OrderBook) CancelContract(contract models.Contract) {
+
+	//ob.mu.Lock()
+	//defer ob.mu.Unlock()
+
+	userID := contract.UserID
 
 	if contracts, ok := ob.UserOrders[userID]; ok {
 		var remainingContracts []models.Contract
@@ -58,9 +128,6 @@ func (ob *models.OrderBook) CancelContract(userID, orderType string, price float
 			if contract.OrderType == orderType && contract.Price == price {
 				switch orderType {
 				case "sell":
-					// if ob.Asks[price] >= contract.Quantity{
-					// 	ob.Asks[price] -= contract.Quantity
-					// }
 					ob.Asks[price] -= contract.Quantity
 					if ob.Asks[price] == 0 {
 						delete(ob.Asks, price)
@@ -89,7 +156,7 @@ func (ob *models.OrderBook) CancelContract(userID, orderType string, price float
 }
 
 // GetOrderBook returns the current state of the order book.
-func (ob *models.OrderBook) GetOrderBook() map[string]interface{} {
+func (ob *OrderBook) GetOrderBook() map[string]interface{} {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
 
@@ -104,7 +171,7 @@ func (ob *models.OrderBook) GetOrderBook() map[string]interface{} {
 // Helper methods
 
 // getLastNElements returns the last n elements of a slice.
-func getLastNElements(slice []float64, n int) []float64 {
+func getLastNElements(slice []float32, n int) []float32 {
 	if n > len(slice) {
 		n = len(slice)
 	}
@@ -112,7 +179,7 @@ func getLastNElements(slice []float64, n int) []float64 {
 }
 
 // matchOrders matches the highest bid with the lowest ask.
-func (ob *models.OrderBook) matchOrders() {
+func (ob *OrderBook) matchOrders() {
 
 	for ob.Asks.Size() > 0 && ob.Bids.Size() > 0 {
 		// Peek top ask and bid
@@ -139,17 +206,17 @@ func (ob *models.OrderBook) matchOrders() {
 		// Remove fully matched orders
 		if topAsk.Quantity == 0 {
 			ob.Asks.Dequeue()
-			ob.removeLimitOrder(&topAsk.Price, topAsk, ob.LimitOrderAsks)
+			ob.removeLimitOrder(&topAsk.Price, topAsk, ob.LimitOrderAsksLevelByLevel)
 		}
 		if topBid.Quantity == 0 {
 			ob.Bids.Dequeue()
-			ob.removeLimitOrder(&topBid.Price, topBid, ob.LimitOrderBids)
+			ob.removeLimitOrder(&topBid.Price, topBid, ob.LimitOrderBidsLevelByLevel)
 		}
 	}
 }
 
 // Helper to remove a specific order from limit order queue
-func (ob *models.OrderBook) removeLimitOrder(price *float64, contract *models.Contract, limitOrders map[float64]*priorityqueue.Queue) {
+func (ob *OrderBook) removeLimitOrder(price *float32, contract *models.Contract, limitOrders map[float32]*priorityqueue.Queue) {
 	// Get the queue for this price level
 	priceQueue := limitOrders[*price]
 
@@ -179,13 +246,13 @@ func (ob *models.OrderBook) removeLimitOrder(price *float64, contract *models.Co
 // getHighestBidPrice returns the highest bid price.
 
 // getTopAsks returns the top 5 asks with total quantity.
-func (ob *models.OrderBook) getTopAsks() []map[string]interface{} {
+func (ob *OrderBook) getTopAsks() []map[string]interface{} {
 	var asks []map[string]interface{}
-	var prices []float64
+	var prices []float32
 	for price := range ob.Asks {
 		prices = append(prices, price)
 	}
-	sort.Float64s(prices)
+	sort.float32s(prices)
 	for i := 0; i < min(5, len(prices)); i++ {
 		price := prices[i]
 		asks = append(asks, map[string]interface{}{"price": price, "quantity": ob.Asks[price]})
@@ -194,13 +261,13 @@ func (ob *models.OrderBook) getTopAsks() []map[string]interface{} {
 }
 
 // getTopBids returns the top 5 bids with total quantity.
-func (ob *models.OrderBook) getTopBids() []map[string]interface{} {
+func (ob *OrderBook) getTopBids() []map[string]interface{} {
 	var bids []map[string]interface{}
-	var prices []float64
+	var prices []float32
 	for price := range ob.Bids {
 		prices = append(prices, price)
 	}
-	sort.Sort(sort.Reverse(sort.Float64Slice(prices)))
+	sort.Sort(sort.Reverse(sort.float32Slice(prices)))
 	for i := 0; i < min(5, len(prices)); i++ {
 		price := prices[i]
 		bids = append(bids, map[string]interface{}{"price": price, "quantity": ob.Bids[price]})

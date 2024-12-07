@@ -5,39 +5,27 @@ import (
 	"github.com/emirpasic/gods/utils"
 )
 
-func ForAsksLevelByLevel(a, b interface{}) int {
+func LevelByLevel(a, b interface{}) int {
 	contractA := a.(*LevelBook)
 	contractB := b.(*LevelBook)
+	if contractA.Type {
+		if contractA.Price < contractB.Price {
+			return -1
+		}
+		if contractA.Price > contractB.Price {
+			return 1
+		}
+		return 0
+	} else {
+		if contractA.Price > contractB.Price {
+			return -1
+		}
+		if contractA.Price < contractB.Price {
+			return 1
+		}
+		return 0
+	}
 
-	if contractA.Price < contractB.Price {
-		return -1
-	}
-	if contractA.Price > contractB.Price {
-		return 1
-	}
-	return 0
-}
-func ForBidsLevelByLevel(a, b interface{}) int {
-	contractA := a.(*LevelBook)
-	contractB := b.(*LevelBook)
-
-	if contractA.Price > contractB.Price {
-		return -1
-	}
-	if contractA.Price < contractB.Price {
-		return 1
-	}
-	return 0
-}
-func ForLimitOrdersAsk(a, b interface{}) int {
-	priorityA := a.(models.LimitOrderTracker).Price
-	priorityB := b.(models.LimitOrderTracker).Price
-	return -utils.IntComparator(priorityA, priorityB) // "-" Descending order
-}
-func ForLimitOrdersBid(a, b interface{}) int {
-	priorityA := a.(models.LimitOrderTracker).Price
-	priorityB := b.(models.LimitOrderTracker).Price
-	return utils.IntComparator(priorityA, priorityB)
 }
 
 func TimeBased(a, b interface{}) int {

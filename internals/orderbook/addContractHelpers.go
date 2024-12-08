@@ -1,6 +1,7 @@
 package orderbook
 
 import (
+	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 	"github.com/emirpasic/gods/queues/priorityqueue"
 )
@@ -16,6 +17,7 @@ func (ob *OrderBook) AddContractToAsks(contract models.Contract) {
 	} else {
 
 		newLevel := &LevelBook{
+			LevelID:       helpers.GenerateRandomString(100),
 			Price:         contract.Price,
 			Type:          true,
 			NoOfContracts: contract.Quantity,
@@ -39,6 +41,7 @@ func (ob *OrderBook) AddContractToBids(contract models.Contract) {
 	} else {
 
 		newLevel := &LevelBook{
+			LevelID:       helpers.GenerateRandomString(100),
 			Price:         contract.Price,
 			Type:          true,
 			NoOfContracts: contract.Quantity,
@@ -61,6 +64,7 @@ func (ob *OrderBook) AddContractToLimitAsks(contract models.Contract) {
 	} else {
 
 		newLevel := &LevelBook{
+			LevelID:       helpers.GenerateRandomString(100),
 			Price:         contract.Price,
 			Type:          true,
 			NoOfContracts: contract.Quantity,
@@ -82,6 +86,7 @@ func (ob *OrderBook) AddContractToLimitBids(contract models.Contract) {
 	} else {
 
 		newLevel := &LevelBook{
+			LevelID:       helpers.GenerateRandomString(100),
 			Price:         contract.Price,
 			Type:          true,
 			NoOfContracts: contract.Quantity,

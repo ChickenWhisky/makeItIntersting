@@ -16,6 +16,7 @@ import (
 // OrderBook stores order data and handles order processing.
 
 type LevelBook struct {
+	LevelID       string                      // LevelBook ID
 	Price         float32                     // Price at that LevelBook
 	Type          bool                        // Ask(true) or Bid(false) for setting up the comparator for the hashmap
 	NoOfContracts int64                       // If 0 then simply delete struct from parent hashmap
@@ -130,13 +131,13 @@ func (ob *OrderBook) CancelContract(contract models.Contract) error {
 	if ok && orderInSystem.UserID == contract.UserID {
 		switch contract.OrderType {
 		case "buy":
-			DeleteContractFromAsks(contract)
+			ob.DeleteContractFromAsks(contract)
 		case "sell":
-			DeleteContractFromBids(contract)
+			ob.DeleteContractFromBids(contract)
 		case "limit_buy":
-			DeleteContractFromLimitAsks(contract)
+			ob.DeleteContractFromLimitAsks(contract)
 		case "limit_sell":
-			DeleteContractFromLimitBids(contract)
+			ob.DeleteContractFromLimitBids(contract)
 		default:
 			{
 				log.Println("Invalid order type")
@@ -151,6 +152,11 @@ func (ob *OrderBook) CancelContract(contract models.Contract) error {
 		log.Println("Order doesnt belong to the user :", contract.UserID)
 		return errors.New("order doesnt belong to the user")
 	}
+
+	// Try matching remaining elements on deletion
+	ob.MatchOrders()
+
+	return nil
 
 }
 

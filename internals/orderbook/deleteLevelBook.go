@@ -1,6 +1,6 @@
 package orderbook
 
-// DeleteLevelBook
+// DeleteLevelBook deletes a given Level Book
 func (ob *OrderBook) DeleteLevelBook(lb *LevelBook) {
 	lb.Orders.Clear()
 
@@ -9,8 +9,8 @@ func (ob *OrderBook) DeleteLevelBook(lb *LevelBook) {
 			delete(lb.Contracts, key)
 		}
 	}
-
 	lb.Orders = nil
 	lb.Contracts = nil
+	ob.ToBeDeletedLevels[lb.LevelID] = lb
 
 }

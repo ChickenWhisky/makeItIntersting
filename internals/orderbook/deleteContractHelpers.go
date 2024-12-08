@@ -9,12 +9,14 @@ func (ob *OrderBook) DeleteContractFromAsks(contract models.Contract) {
 	requiredLevelBook := ob.AsksOrderByOrder[contract.Price]
 
 	// Now update the Level Book
-	requiredLevelBook.NoOfContracts -= contract.Quantity
-	if requiredLevelBook.NoOfContracts == 0 {
+
+	if requiredLevelBook.NoOfContracts == contract.Quantity {
 		ob.DeleteLevelBook(requiredLevelBook)
 	} else {
 		// This adds the system
-		delete(requiredLevelBook.Contracts, contract.ContractID)
+		// We don't remove it from the main list of contracts as we
+		// can only do that once the respective contract pops up at the top
+		// of the heap
 		requiredLevelBook.ToBeDeleted[contract.ContractID] = &contract
 	}
 	delete(ob.Orders, contract.ContractID)

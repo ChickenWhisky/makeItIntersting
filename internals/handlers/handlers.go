@@ -15,6 +15,7 @@ var ob = orderbook.NewOrderBook()
 // SetupRoutes configures the routes for the Gin router
 func SetupRoutes(router *gin.Engine) {
 	router.POST("/order", CreateOrder)
+	router.PUT("/order", ModifyOrder)
 	router.DELETE("/order", CancelOrder)
 	router.GET("/orderbook", GetOrderBook)
 }
@@ -26,7 +27,7 @@ func CreateOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	contract.Timestamp = time.Now().Unix()
+	contract.Timestamp = time.Now().UnixMilli()
 	ob.PushContractIntoQueue(contract)
 
 	//err := ob.AddContract(contract)

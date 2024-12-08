@@ -35,10 +35,10 @@ type OrderBook struct {
 	LimitBidsOrderByOrder map[float32]*LevelBook      // Same except for Limit Order Bids
 	IncomingContracts     chan models.Contract        // Channel to stream incoming orders
 	Orders                map[string]*models.Contract // A map to extract any existing order
-	ToBeDeletedOrders     map[string]*models.Contract // A map to keep track of
-	ToBeDeletedLevels     map[string]*LevelBook       // A map to keep track of Levels to be deleted
-	LastMatchedPrices     []float32
-	Lock                  sync.Mutex
+	//ToBeDeletedOrders     map[string]*models.Contract // A map to keep track of
+	ToBeDeletedLevels map[string]*LevelBook // A map to keep track of Levels to be deleted
+	LastMatchedPrices []float32
+	Lock              sync.Mutex
 }
 
 // NewOrderBook creates a new empty order book.
@@ -53,10 +53,11 @@ func NewOrderBook() *OrderBook {
 		LimitAsksOrderByOrder: make(map[float32]*LevelBook),
 		LimitBidsOrderByOrder: make(map[float32]*LevelBook),
 		IncomingContracts:     make(chan models.Contract),
-		ToBeDeletedOrders:     make(chan models.Contract),
-		Orders:                make(map[string]*models.Contract),
-		LastMatchedPrices:     make([]float32, 0),
-		Lock:                  sync.Mutex{},
+		//ToBeDeletedOrders:     make(map[string]*models.Contract),
+		ToBeDeletedLevels: make(map[string]*LevelBook),
+		Orders:            make(map[string]*models.Contract),
+		LastMatchedPrices: make([]float32, 0),
+		Lock:              sync.Mutex{},
 	}
 	ob.StartProcessing()
 	return ob

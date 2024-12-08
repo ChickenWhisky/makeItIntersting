@@ -1,6 +1,7 @@
 package orderbook
 
 import (
+	"errors"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 	"github.com/emirpasic/gods/queues/priorityqueue"
@@ -20,42 +21,40 @@ type LevelBook struct {
 	NoOfContracts int64                       // If 0 then simply delete struct from parent hashmap
 	Orders        *priorityqueue.Queue        // Meant to keep order of contracts based on TimeStamps
 	Contracts     map[string]*models.Contract // Keep track of contracts in order to get instant data
-	ToBeDeleted   chan models.Contract        // For tracking what needs to be deleted
+	ToBeDeleted   map[string]*models.Contract // For tracking what needs to be deleted
 }
 
 type OrderBook struct {
-	AsksLevelByLevel      *priorityqueue.Queue          // To keep track of orders simply by price level and not on a per-order basis
-	BidsLevelByLevel      *priorityqueue.Queue          // Same except for Bids
-	AsksOrderByOrder      map[float32]*LevelBook        // To be able to extract orders on a contract by contract basis
-	BidsOrderByOrder      map[float32]*LevelBook        // Same except for Bids
-	LimitAsksLevelByLevel *priorityqueue.Queue          // To keep track of Limit Orders based ordered by Prices and further by time stamps so
-	LimitBidsLevelByLevel *priorityqueue.Queue          // Same except for Limit Order Bids
-	LimitAsksOrderByOrder map[float32]*LevelBook        // To be able to extract orders on a contract by contract basis
-	LimitBidsOrderByOrder map[float32]*LevelBook        // Same except for Limit Order Bids
-	IncomingContracts     chan models.Contract          // Channel to stream incoming orders
-	UserOrders            map[string][]*models.Contract // A map to extract any existing order
-	ToBeDeletedOrders     chan models.Contract          // A map to keep track of
+	AsksLevelByLevel      *priorityqueue.Queue        // To keep track of orders simply by price level and not on a per-order basis
+	BidsLevelByLevel      *priorityqueue.Queue        // Same except for Bids
+	LimitAsksLevelByLevel *priorityqueue.Queue        // To keep track of Limit Orders based ordered by Prices and further by time stamps so
+	LimitBidsLevelByLevel *priorityqueue.Queue        // Same except for Limit Order Bids
+	AsksOrderByOrder      map[float32]*LevelBook      // To be able to extract orders on a contract by contract basis
+	BidsOrderByOrder      map[float32]*LevelBook      // Same except for Bids
+	LimitAsksOrderByOrder map[float32]*LevelBook      // To be able to extract orders on a contract by contract basis
+	LimitBidsOrderByOrder map[float32]*LevelBook      // Same except for Limit Order Bids
+	IncomingContracts     chan models.Contract        // Channel to stream incoming orders
+	Orders                map[string]*models.Contract // A map to extract any existing order
+	ToBeDeletedOrders     map[string]*models.Contract // A map to keep track of
+	ToBeDeletedLevels     map[string]*LevelBook       // A map to keep track of Levels to be deleted
 	LastMatchedPrices     []float32
 	Lock                  sync.Mutex
 }
 
 // NewOrderBook creates a new empty order book.
-
-// Will try to implement order book in a better manner
-
 func NewOrderBook() *OrderBook {
 	ob := &OrderBook{
 		AsksLevelByLevel:      priorityqueue.NewWith(LevelByLevel),
 		BidsLevelByLevel:      priorityqueue.NewWith(LevelByLevel),
-		AsksOrderByOrder:      make(map[float32]*LevelBook),
-		BidsOrderByOrder:      make(map[float32]*LevelBook),
 		LimitAsksLevelByLevel: priorityqueue.NewWith(LevelByLevel),
 		LimitBidsLevelByLevel: priorityqueue.NewWith(LevelByLevel),
+		AsksOrderByOrder:      make(map[float32]*LevelBook),
+		BidsOrderByOrder:      make(map[float32]*LevelBook),
 		LimitAsksOrderByOrder: make(map[float32]*LevelBook),
 		LimitBidsOrderByOrder: make(map[float32]*LevelBook),
 		IncomingContracts:     make(chan models.Contract),
 		ToBeDeletedOrders:     make(chan models.Contract),
-		UserOrders:            make(map[string][]*models.Contract),
+		Orders:                make(map[string]*models.Contract),
 		LastMatchedPrices:     make([]float32, 0),
 		Lock:                  sync.Mutex{},
 	}
@@ -63,8 +62,7 @@ func NewOrderBook() *OrderBook {
 	return ob
 }
 
-//  Starts up a thread that continuously checks the channel for new contracts to process
-
+// StartProcessing tarts up a thread that continuously checks the channel for new contracts to process
 func (ob *OrderBook) StartProcessing() {
 	go func() {
 		for contract := range ob.IncomingContracts {
@@ -81,7 +79,11 @@ func (ob *OrderBook) StartProcessing() {
 
 // AddContract adds a new contract (order) to the order book and attempts to match orders.
 
-func (ob *OrderBook) AddContract(contract models.Contract) {
+func (ob *OrderBook) PushContractIntoQueue(contract models.Contract) {
+	ob.IncomingContracts <- contract
+}
+
+func (ob *OrderBook) AddContract(contract models.Contract) error {
 
 	//ob.mu.Lock()
 	//defer ob.mu.Unlock()
@@ -99,20 +101,68 @@ func (ob *OrderBook) AddContract(contract models.Contract) {
 		ob.AddContractToLimitAsks(contract)
 	case "limit_sell":
 		ob.AddContractToLimitBids(contract)
+	default:
+		return errors.New("invalid order type")
+	}
+
+	if err == nil {
+		return errors.New("could not create order")
 	}
 	// Store the user's orders
-	ob.UserOrders[contract.UserID] = append(ob.UserOrders[contract.UserID], &contract)
+	ob.Orders[contract.ContractID] = &contract
 	// Attempt to match orders after adding a new one
-	ob.matchOrders()
+	ob.MatchOrders()
+	return nil
 }
 
 // CancelContract cancels a specific user's contract.
-func (ob *OrderBook) CancelContract(contract models.Contract) {
+func (ob *OrderBook) CancelContract(contract models.Contract) error {
+
+	// Data required to cancel a given contract
+	// Contract_ID
+	// User_ID
+	// From the Contract_ID alone we can get the info like price and from there we can
+	// easily access the required LevelBook and then delete the data accordingly
+
+	// First check if Order Exists
+	orderInSystem, ok := ob.Orders[contract.ContractID]
+	if ok && orderInSystem.UserID == contract.UserID {
+		switch contract.OrderType {
+		case "buy":
+			DeleteContractFromAsks(contract)
+		case "sell":
+			DeleteContractFromBids(contract)
+		case "limit_buy":
+			DeleteContractFromLimitAsks(contract)
+		case "limit_sell":
+			DeleteContractFromLimitBids(contract)
+		default:
+			{
+				log.Println("Invalid order type")
+				return errors.New("invalid order type")
+			}
+		}
+
+	} else if !ok {
+		log.Println("Order doesnt exist in the system")
+		return errors.New("order doesnt exist in the system")
+	} else {
+		log.Println("Order doesnt belong to the user :", contract.UserID)
+		return errors.New("order doesnt belong to the user")
+	}
 
 }
 
-// matchOrders matches the highest bid with the lowest ask.
-func (ob *OrderBook) matchOrders() {
+// ModifyContract cancels a specific user's contract and then adds a new contract based on the updated modifications.
+func (ob *OrderBook) ModifyContract(contract models.Contract) {
+
+	// Data required to cancel a given contract
+	// Contract_ID
+	// User_ID
+}
+
+// MatchOrders matches the highest bid with the lowest ask.
+func (ob *OrderBook) MatchOrders() {
 
 	for ob.Asks.Size() > 0 && ob.Bids.Size() > 0 {
 		// Peek top ask and bid

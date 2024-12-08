@@ -27,23 +27,31 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 	contract.Timestamp = time.Now().Unix()
-	ob.AddContract(contract)
-	c.JSON(http.StatusCreated, gin.H{"message": "Order created successfully"})
+	ob.PushContractIntoQueue(contract)
+
+	//err := ob.AddContract(contract)
+	//if err == nil {
+	//	c.JSON(http.StatusCreated, gin.H{"message": "Order created successfully"})
+	//} else {
+	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	//}
+
 }
 
 // CancelOrder handles canceling an existing order
 func CancelOrder(c *gin.Context) {
-	var data struct {
-		UserID    string  `json:"user_id"`
-		OrderType string  `json:"order_type"`
-		Price     float64 `json:"price"`
-	}
-	if err := c.BindJSON(&data); err != nil {
+	var contractForCancellation models.Contract
+	if err := c.BindJSON(&contractForCancellation); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ob.CancelContract(data.UserID, data.OrderType, data.Price)
-	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
+	ob.PushContractIntoQueue(contractForCancellation)
+	//err := ob.CancelContract(contractForCancellation)
+	//if err == nil {
+	//	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
+	//} else {
+	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	//}
 }
 
 // GetOrderBook returns the current state of the order book

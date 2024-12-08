@@ -20,7 +20,7 @@ func (ob *OrderBook) AddContractToAsks(contract models.Contract) {
 			Type:          true,
 			NoOfContracts: contract.Quantity,
 			Orders:        priorityqueue.NewWith(TimeBased),
-			ToBeDeleted:   make(chan models.Contract),
+			ToBeDeleted:   make(map[string]*models.Contract),
 			Contracts:     make(map[string]*models.Contract),
 		}
 		newLevel.Orders.Enqueue(contract)
@@ -43,7 +43,7 @@ func (ob *OrderBook) AddContractToBids(contract models.Contract) {
 			Type:          true,
 			NoOfContracts: contract.Quantity,
 			Orders:        priorityqueue.NewWith(TimeBased),
-			ToBeDeleted:   make(chan models.Contract),
+			ToBeDeleted:   make(map[string]*models.Contract),
 			Contracts:     make(map[string]*models.Contract),
 		}
 		newLevel.Orders.Enqueue(contract)
@@ -65,7 +65,7 @@ func (ob *OrderBook) AddContractToLimitAsks(contract models.Contract) {
 			Type:          true,
 			NoOfContracts: contract.Quantity,
 			Orders:        priorityqueue.NewWith(TimeBased),
-			ToBeDeleted:   make(chan models.Contract),
+			ToBeDeleted:   make(map[string]*models.Contract),
 			Contracts:     make(map[string]*models.Contract),
 		}
 		newLevel.Orders.Enqueue(contract)
@@ -86,7 +86,7 @@ func (ob *OrderBook) AddContractToLimitBids(contract models.Contract) {
 			Type:          true,
 			NoOfContracts: contract.Quantity,
 			Orders:        priorityqueue.NewWith(TimeBased),
-			ToBeDeleted:   make(chan models.Contract),
+			ToBeDeleted:   make(map[string]*models.Contract),
 			Contracts:     make(map[string]*models.Contract),
 		}
 		newLevel.Orders.Enqueue(contract)

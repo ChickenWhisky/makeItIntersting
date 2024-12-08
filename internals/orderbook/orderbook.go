@@ -38,7 +38,7 @@ type OrderBook struct {
 	Orders                map[string]*models.Contract // A map to extract any existing order
 	//ToBeDeletedOrders     map[string]*models.Contract // A map to keep track of
 	ToBeDeletedLevels map[string]*LevelBook // A map to keep track of Levels to be deleted
-	LastMatchedPrices []float32
+	LastMatchedPrices []models.Trade
 	Lock              sync.Mutex
 }
 
@@ -54,10 +54,10 @@ func NewOrderBook() *OrderBook {
 		LimitAsksOrderByOrder: make(map[float32]*LevelBook),
 		LimitBidsOrderByOrder: make(map[float32]*LevelBook),
 		IncomingContracts:     make(chan models.Contract),
-		//ToBeDeletedOrders:     make(map[string]*models.Contract),
+		//ToBeDeletedOrders:    make(map[string]*models.Contract),
 		ToBeDeletedLevels: make(map[string]*LevelBook),
 		Orders:            make(map[string]*models.Contract),
-		LastMatchedPrices: make([]float32, 0),
+		LastMatchedPrices: make([]models.Trade, 0),
 		Lock:              sync.Mutex{},
 	}
 	ob.StartProcessing()
@@ -89,11 +89,7 @@ func (ob *OrderBook) AddContract(contract models.Contract) error {
 
 	//ob.mu.Lock()
 	//defer ob.mu.Unlock()
-	lengthFromEnv, err := strconv.Atoi(os.Getenv("CONTRACT_ID_LENGTH"))
-	if err != nil {
-		log.Println("Error converting CONTRACT_ID_LENGTH to int")
-	}
-	contract.ContractID = helpers.GenerateRandomString(lengthFromEnv)
+	contract.ContractID = helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("CONTRACT_ID_LENGTH")))
 	switch contract.OrderType {
 	case "sell":
 		ob.AddContractToAsks(contract)
@@ -162,45 +158,37 @@ func (ob *OrderBook) CancelContract(contract models.Contract) error {
 
 // ModifyContract cancels a specific user's contract and then adds a new contract based on the updated modifications.
 func (ob *OrderBook) ModifyContract(contract models.Contract) {
-
-	// Data required to cancel a given contract
-	// Contract_ID
-	// User_ID
+	ob.CancelContract(contract)
+	//lengthFromEnv ,_ := strconv.Atoi(os.Getenv("CONTRACT_ID_LENGTH"))
+	// Generate new contractID for the existing contract
+	//contract.ContractID = helpers.GenerateRandomString(lengthFromEnv)
+	ob.AddContract(contract)
 }
 
 // MatchOrders matches the highest bid with the lowest ask.
 func (ob *OrderBook) MatchOrders() {
 
-	for ob.Asks.Size() > 0 && ob.Bids.Size() > 0 {
-		// Peek top ask and bid
-		topAskInterface, askOk := ob.Asks.Peek()
-		topBidInterface, bidOk := ob.Bids.Peek()
+	// First we need to delete all references of LevelBooks that are to be deleted in Asks as well
+	ob.FinalLevelDeletion()
 
-		if !askOk || !bidOk {
-			break
+	// Now we move on to seeing if the top most bids will match or not
+	lal, doAsksExist := ob.AsksLevelByLevel.Peek()
+	hbl, doBidsExist := ob.BidsLevelByLevel.Peek()
+	lowestAskLevel := lal.(*LevelBook)
+	highestBidLevel := hbl.(*LevelBook)
+	if doAsksExist && doBidsExist {
+		if lowestAskLevel.Price <= highestBidLevel.Price {
+			numberOfMatchedContracts := min(lowestAskLevel.NoOfContracts, highestBidLevel.NoOfContracts)
+			lowestAskLevel.NoOfContracts -= numberOfMatchedContracts
+			highestBidLevel.NoOfContracts -= numberOfMatchedContracts
+			ob.LastMatchedPrices = append(ob.LastMatchedPrices, models.Trade{
+				TradeID: helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("TRADE_ID_LENGTH"))),
+			})
+			ob.MatchOrders()
 		}
+	} else {
+		return
 
-		topAsk := topAskInterface.(*models.Contract)
-		topBid := topBidInterface.(*models.Contract)
-
-		// Determine matching quantity
-		matchQuantity := min(topAsk.Quantity, topBid.Quantity)
-
-		// Update order quantities
-		topAsk.Quantity -= matchQuantity
-		topBid.Quantity -= matchQuantity
-
-		// Record matched price
-		ob.LastMatchedPrices = append(ob.LastMatchedPrices, topAsk.Price)
-
-		// Remove fully matched orders
-		if topAsk.Quantity == 0 {
-			ob.Asks.Dequeue()
-			ob.removeLimitOrder(&topAsk.Price, topAsk, ob.LimitAsksLevelByLevel)
-		}
-		if topBid.Quantity == 0 {
-			ob.Bids.Dequeue()
-			ob.removeLimitOrder(&topBid.Price, topBid, ob.LimitBidsLevelByLevel)
-		}
 	}
+
 }

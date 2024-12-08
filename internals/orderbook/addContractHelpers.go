@@ -4,6 +4,7 @@ import (
 	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 	"github.com/emirpasic/gods/queues/priorityqueue"
+	"os"
 )
 
 func (ob *OrderBook) AddContractToAsks(contract models.Contract) {
@@ -17,7 +18,7 @@ func (ob *OrderBook) AddContractToAsks(contract models.Contract) {
 	} else {
 
 		newLevel := &LevelBook{
-			LevelID:       helpers.GenerateRandomString(100),
+			LevelID:       helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("LEVEL_ID_LENGTH"))),
 			Price:         contract.Price,
 			Type:          true,
 			NoOfContracts: contract.Quantity,
@@ -41,7 +42,7 @@ func (ob *OrderBook) AddContractToBids(contract models.Contract) {
 	} else {
 
 		newLevel := &LevelBook{
-			LevelID:       helpers.GenerateRandomString(100),
+			LevelID:       helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("LEVEL_ID_LENGTH"))),
 			Price:         contract.Price,
 			Type:          true,
 			NoOfContracts: contract.Quantity,
@@ -64,7 +65,7 @@ func (ob *OrderBook) AddContractToLimitAsks(contract models.Contract) {
 	} else {
 
 		newLevel := &LevelBook{
-			LevelID:       helpers.GenerateRandomString(100),
+			LevelID:       helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("LEVEL_ID_LENGTH"))),
 			Price:         contract.Price,
 			Type:          true,
 			NoOfContracts: contract.Quantity,
@@ -86,7 +87,7 @@ func (ob *OrderBook) AddContractToLimitBids(contract models.Contract) {
 	} else {
 
 		newLevel := &LevelBook{
-			LevelID:       helpers.GenerateRandomString(100),
+			LevelID:       helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("LEVEL_ID_LENGTH"))),
 			Price:         contract.Price,
 			Type:          true,
 			NoOfContracts: contract.Quantity,

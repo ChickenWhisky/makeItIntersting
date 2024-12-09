@@ -8,7 +8,6 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"log"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -54,7 +53,7 @@ func NewOrderBook() *OrderBook {
 		LimitAsksOrderByOrder: make(map[float32]*LevelBook),
 		LimitBidsOrderByOrder: make(map[float32]*LevelBook),
 		IncomingContracts:     make(chan models.Contract),
-		//ToBeDeletedOrders:    make(map[string]*models.Contract),
+		//ToBeDeletedOrders:   make(map[string]*models.Contract),
 		ToBeDeletedLevels: make(map[string]*LevelBook),
 		Orders:            make(map[string]*models.Contract),
 		LastMatchedPrices: make([]models.Trade, 0),
@@ -79,12 +78,11 @@ func (ob *OrderBook) StartProcessing() {
 	}()
 }
 
-// AddContract adds a new contract (order) to the order book and attempts to match orders.
-
 func (ob *OrderBook) PushContractIntoQueue(contract models.Contract) {
 	ob.IncomingContracts <- contract
 }
 
+// AddContract adds a new contract (order) to the order book and attempts to match orders.
 func (ob *OrderBook) AddContract(contract models.Contract) error {
 
 	//ob.mu.Lock()
@@ -103,9 +101,6 @@ func (ob *OrderBook) AddContract(contract models.Contract) error {
 		return errors.New("invalid order type")
 	}
 
-	if err == nil {
-		return errors.New("could not create order")
-	}
 	// Store the user's orders
 	ob.Orders[contract.ContractID] = &contract
 	// Attempt to match orders after adding a new one
@@ -136,7 +131,6 @@ func (ob *OrderBook) CancelContract(contract models.Contract) error {
 			ob.DeleteContractFromLimitBids(contract)
 		default:
 			{
-				log.Println("Invalid order type")
 				return errors.New("invalid order type")
 			}
 		}
@@ -159,31 +153,29 @@ func (ob *OrderBook) CancelContract(contract models.Contract) error {
 // ModifyContract cancels a specific user's contract and then adds a new contract based on the updated modifications.
 func (ob *OrderBook) ModifyContract(contract models.Contract) {
 	ob.CancelContract(contract)
-	//lengthFromEnv ,_ := strconv.Atoi(os.Getenv("CONTRACT_ID_LENGTH"))
-	// Generate new contractID for the existing contract
-	//contract.ContractID = helpers.GenerateRandomString(lengthFromEnv)
 	ob.AddContract(contract)
+}
+
+// AddLimitOrdersToOrderBook adds all the orders that exists in the limit order tracker into the main ask and buy heaps if there are any to be added
+func (ob *OrderBook) AddLimitOrdersToOrderBook() {
+	ob
 }
 
 // MatchOrders matches the highest bid with the lowest ask.
 func (ob *OrderBook) MatchOrders() {
 
 	// First we need to delete all references of LevelBooks that are to be deleted in Asks as well
+	ob.FinalContractDeletion()
 	ob.FinalLevelDeletion()
-
+	ob.AddLimitOrdersToOrderBook()
 	// Now we move on to seeing if the top most bids will match or not
 	lal, doAsksExist := ob.AsksLevelByLevel.Peek()
 	hbl, doBidsExist := ob.BidsLevelByLevel.Peek()
 	lowestAskLevel := lal.(*LevelBook)
 	highestBidLevel := hbl.(*LevelBook)
+
 	if doAsksExist && doBidsExist {
 		if lowestAskLevel.Price <= highestBidLevel.Price {
-			numberOfMatchedContracts := min(lowestAskLevel.NoOfContracts, highestBidLevel.NoOfContracts)
-			lowestAskLevel.NoOfContracts -= numberOfMatchedContracts
-			highestBidLevel.NoOfContracts -= numberOfMatchedContracts
-			ob.LastMatchedPrices = append(ob.LastMatchedPrices, models.Trade{
-				TradeID: helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("TRADE_ID_LENGTH"))),
-			})
 			ob.MatchOrders()
 		}
 	} else {

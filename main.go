@@ -4,8 +4,11 @@ import (
 	"github.com/ChickenWhisky/makeItIntersting/docs"
 	"github.com/ChickenWhisky/makeItIntersting/internals/handlers"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
+	"log"
+	"os"
 )
 
 func main() {
@@ -17,6 +20,18 @@ func main() {
 	docs.SwaggerInfo.Host = "petstore.swagger.io"
 	docs.SwaggerInfo.BasePath = "/v2"
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	// Get host and port from environment variables
+	host := os.Getenv("HOST")
+	port := os.Getenv("PORT")
+	address := host + ":" + port
+
 	// Initialize the Gin router
 	router := gin.Default()
 
@@ -27,5 +42,5 @@ func main() {
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	// Run the server
-	router.Run(":8080")
+	router.Run(address)
 }

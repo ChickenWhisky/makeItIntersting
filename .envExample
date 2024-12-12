@@ -1,3 +1,8 @@
+HOST= # server host
+PORT= # server port
+DB_PORT=
+DB_PASS=
+DB_NAME=
 CONTRACT_ID_LENGTH=
 LEVEL_ID_LENGTH=
 TRADE_ID_LENGTH=

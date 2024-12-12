@@ -17,7 +17,7 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/order", CreateOrder)
 	router.PUT("/order", ModifyOrder)
 	router.DELETE("/order", CancelOrder)
-	router.GET("/orderbook", GetOrderBook)
+	//router.GET("/orderbook", GetOrderBook)
 }
 
 // CreateOrder handles creating a new order
@@ -30,13 +30,7 @@ func CreateOrder(c *gin.Context) {
 	contract.Timestamp = time.Now().UnixMilli()
 	ob.PushContractIntoQueue(contract)
 
-	//err := ob.AddContract(contract)
-	//if err == nil {
-	//	c.JSON(http.StatusCreated, gin.H{"message": "Order created successfully"})
-	//} else {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	//}
-
+	c.JSON(http.StatusCreated, gin.H{"message": "Order created successfully"})
 }
 
 // CancelOrder handles canceling an existing order
@@ -47,15 +41,23 @@ func CancelOrder(c *gin.Context) {
 		return
 	}
 	ob.PushContractIntoQueue(contractForCancellation)
-	//err := ob.CancelContract(contractForCancellation)
-	//if err == nil {
-	//	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
-	//} else {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	//}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
+
 }
 
+// ModifyOrder handles modifying an existing order
+func ModifyOrder(c *gin.Context) {
+	var contractForModification models.Contract
+	if err := c.BindJSON(&contractForModification); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ob.PushContractIntoQueue(contractForModification)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})
+
 // GetOrderBook returns the current state of the order book
-func GetOrderBook(c *gin.Context) {
-	c.JSON(http.StatusOK, ob.GetOrderBook())
-}
+//func GetOrderBook(c *gin.Context) {
+//	c.JSON(http.StatusOK, ob.GetOrderBook())
+//}

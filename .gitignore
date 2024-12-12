@@ -1,4 +1,5 @@
 testing/trading_simulation.log
 trading_simulation.log
 .env
+docker-compose.yml
 .idea

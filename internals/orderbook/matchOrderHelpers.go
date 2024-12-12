@@ -150,18 +150,53 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() {
 								contract.Timestamp = time.Now().UnixMilli()
 								contract.OrderType = "sell"
 								ob.AddContractToAsks(*contract)
-								Level.NoOfContracts -= contract.Quantity
 							}
+							Level.NoOfContracts -= contract.Quantity
 							Level.Orders.Dequeue()
 						}
-						Level.
-							// Delete the LevelBook from the LimitAsksOrderByOrder
-							delete(ob.LimitAsksOrderByOrder, price)
+						// Delete the LevelBook from the LimitAsksOrderByOrder
+						delete(ob.LimitAsksOrderByOrder, price)
 					}
 				}
 			} else {
 				break
 			}
 		}
+	}
+}
+
+// MergeTopPrices takes and merges contracts in the top of the ask books and the bid books
+func (ob *OrderBook) MergeTopPrices() {
+
+	// Check if the top most bids will match or not
+	lal, doAsksExist := ob.AsksLevelByLevel.Peek()
+	hbl, doBidsExist := ob.BidsLevelByLevel.Peek()
+	lowestAskLevel := lal.(*LevelBook)
+	highestBidLevel := hbl.(*LevelBook)
+
+	if doAsksExist && doBidsExist {
+		if lowestAskLevel.Price <= highestBidLevel.Price {
+			for !lowestAskLevel.Orders.Empty() && !highestBidLevel.Orders.Empty() {
+				lowestAskContract, _ := lowestAskLevel.Orders.Peek()
+				highestBidContract, _ := highestBidLevel.Orders.Peek()
+
+				if lowestAskContract.(*models.Contract).Quantity == highestBidContract.(*models.Contract).Quantity {
+					lowestAskLevel.Orders.Dequeue()
+					highestBidLevel.Orders.Dequeue()
+					lowestAskLevel.NoOfContracts -= lowestAskContract.(*models.Contract).Quantity
+					highestBidLevel.NoOfContracts -= highestBidContract.(*models.Contract).Quantity
+				} else if lowestAskContract.(*models.Contract).Quantity < highestBidContract.(*models.Contract).Quantity {
+					lowestAskLevel.Orders.Dequeue()
+					highestBidContract.(*models.Contract).Quantity -= lowestAskContract.(*models.Contract).Quantity
+					lowestAskLevel.NoOfContracts -= lowestAskContract.(*models.Contract).Quantity
+				} else {
+					highestBidLevel.Orders.Dequeue()
+					lowestAskContract.(*models.Contract).Quantity -= highestBidContract.(*models.Contract).Quantity
+					highestBidLevel.NoOfContracts -= highestBidContract.(*models.Contract).Quantity
+				}
+			}
+		}
+	} else {
+		return
 	}
 }

@@ -171,7 +171,8 @@ func (ob *OrderBook) MatchOrders() {
 
 	if doAsksExist && doBidsExist {
 		if lowestAskLevel.Price <= highestBidLevel.Price {
-			ob.MatchOrders()
+
+			ob.MergeTopPrices()
 		}
 	} else {
 		return

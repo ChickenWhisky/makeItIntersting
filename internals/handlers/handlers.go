@@ -17,7 +17,8 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/order", CreateOrder)
 	router.PUT("/order", ModifyOrder)
 	router.DELETE("/order", CancelOrder)
-	//router.GET("/orderbook", GetOrderBook)
+	router.GET("/trades", GetLastTrades)
+	router.GET("/top", GetTopOfOrderBook)
 }
 
 // CreateOrder handles creating a new order
@@ -28,9 +29,9 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 	contract.Timestamp = time.Now().UnixMilli()
-	ob.PushContractIntoQueue(contract)
+	ob.AddContract(contract)
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Order created successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "contract": contract})
 }
 
 // CancelOrder handles canceling an existing order
@@ -40,7 +41,7 @@ func CancelOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ob.PushContractIntoQueue(contractForCancellation)
+	ob.CancelContract(contractForCancellation)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 
@@ -53,12 +54,32 @@ func ModifyOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ob.PushContractIntoQueue(contractForModification)
+	ob.ModifyContract(contractForModification)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})
 }
 
-// GetOrderBook returns the current state of the order book
-//func GetOrderBook(c *gin.Context) {
-//	c.JSON(http.StatusOK, ob.GetOrderBook())
-//}
+// GetLastTrades returns the current state of the order book
+func GetLastTrades(c *gin.Context) {
+	lastTradedPrices := ob.GetLastTrades()
+	for _, trade := range *lastTradedPrices {
+		c.JSON(http.StatusOK, trade)
+	}
+}
+
+// GetTopOfOrderBook gets the top ask and bid level details
+func GetTopOfOrderBook(c *gin.Context) {
+	topOfOrderBook := ob.GetTopOfOrderBook()
+	if len(topOfOrderBook) == 0 {
+		c.JSON(http.StatusOK, gin.H{"message": "No orders in the system"})
+		return
+	} else {
+		firstLevel := topOfOrderBook[0]
+		secondLevel := topOfOrderBook[1]
+		if firstLevel.Type {
+			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_ask": firstLevel, "top_bid": secondLevel})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_bid": firstLevel, "top_ask": secondLevel})
+		}
+	}
+}

@@ -3,3 +3,6 @@ trading_simulation.log
 .env
 docker-compose.yml
 .idea
+main
+.air.toml
+tmp

@@ -75,6 +75,7 @@ func (ob *OrderBook) StartProcessing() {
 				ob.CancelContract(contract)
 			}
 		}
+
 	}()
 }
 
@@ -179,4 +180,25 @@ func (ob *OrderBook) MatchOrders() {
 
 	}
 
+}
+
+// GetLastTrades gets the traded prices
+func (ob *OrderBook) GetLastTrades() *[]models.Trade {
+	return &ob.LastMatchedPrices
+}
+
+// GetTopOfOrderBook gets the top Ask and Bid Level Details
+func (ob *OrderBook) GetTopOfOrderBook() []LevelBook {
+	var topLevels []LevelBook
+	topAsk, taNotExists := ob.AsksLevelByLevel.Peek()
+	topBid, tbNotExists := ob.BidsLevelByLevel.Peek()
+	if taNotExists {
+		ta := *topAsk.(*LevelBook)
+		topLevels = append(topLevels, ta)
+	}
+	if tbNotExists {
+		tb := *topBid.(*LevelBook)
+		topLevels = append(topLevels, tb)
+	}
+	return topLevels
 }

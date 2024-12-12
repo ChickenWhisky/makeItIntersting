@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func logHandler(lowestAskContract *models.Contract, highestBidContract *models.Contract) {
+func (ob *OrderBook) LogHandler(lowestAskContract *models.Contract, highestBidContract *models.Contract) {
 	// Log the trade
 	trade := models.Trade{
 		TradeID:          "some_unique_trade_id", // You need to generate a unique ID
@@ -20,8 +20,8 @@ func logHandler(lowestAskContract *models.Contract, highestBidContract *models.C
 		Quantity:         min(lowestAskContract.Quantity, highestBidContract.Quantity),
 		Timestamp:        time.Now().UnixMilli(),
 	}
-
-	file, err := os.OpenFile("trades.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	ob.LastMatchedPrices = append(ob.LastMatchedPrices, trade)
+	file, err := os.OpenFile("trades.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println("Error opening file:", err)
 		return

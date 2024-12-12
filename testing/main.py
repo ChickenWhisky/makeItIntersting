@@ -7,8 +7,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Config for the frequency of deletions (e.g., 20% chance of deletion)
 DELETE_PROBABILITY = 0.2
-API_URL = "http://localhost:8080/order"
-ORDERBOOK_URL = "http://localhost:8080/orderbook"
+API_URL = "http://localhost:8000/order"
+ORDERBOOK_URL = "http://localhost:8000/orderbook"
 
 # Random values range
 MIN_PRICE = 45

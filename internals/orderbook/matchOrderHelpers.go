@@ -55,9 +55,9 @@ func (ob *OrderBook) FinalLevelDeletion() {
 
 func (ob *OrderBook) FinalContractDeletion() {
 
-	l, BidsBookEmpty := ob.BidsLevelByLevel.Peek()
+	l, BidsBookNotEmpty := ob.BidsLevelByLevel.Peek()
 	// Check if the Bids Heap is empty if it is then there is nothing to delete in it
-	if !BidsBookEmpty {
+	if BidsBookNotEmpty {
 		Level := l.(*LevelBook)
 		for !Level.Orders.Empty() {
 			c, _ := Level.Orders.Peek()
@@ -73,9 +73,9 @@ func (ob *OrderBook) FinalContractDeletion() {
 		}
 	}
 
-	l, AsksBookEmpty := ob.AsksLevelByLevel.Peek()
+	l, AsksBookNotEmpty := ob.AsksLevelByLevel.Peek()
 	// Check if the Asks Heap is empty if it is then there is nothing to delete in it
-	if !AsksBookEmpty {
+	if !AsksBookNotEmpty {
 		Level := l.(*LevelBook)
 		for !Level.Orders.Empty() {
 			c, _ := Level.Orders.Peek()
@@ -91,9 +91,9 @@ func (ob *OrderBook) FinalContractDeletion() {
 		}
 	}
 
-	l, LimitBidsBookEmpty := ob.LimitBidsLevelByLevel.Peek()
+	l, LimitBidsBookNotEmpty := ob.LimitBidsLevelByLevel.Peek()
 	// Check if the LimitBids Heap is empty if it is then there is nothing to delete in it
-	if !LimitBidsBookEmpty {
+	if LimitBidsBookNotEmpty {
 		Level := l.(*LevelBook)
 		for !Level.Orders.Empty() {
 			c, _ := Level.Orders.Peek()
@@ -109,9 +109,9 @@ func (ob *OrderBook) FinalContractDeletion() {
 		}
 	}
 
-	l, LimitAsksBookEmpty := ob.LimitAsksLevelByLevel.Peek()
+	l, LimitAsksBookNotEmpty := ob.LimitAsksLevelByLevel.Peek()
 	// Check if the LimitAsks Heap is empty if it is then there is nothing to delete in it
-	if !LimitAsksBookEmpty {
+	if LimitAsksBookNotEmpty {
 		Level := l.(*LevelBook)
 		for !Level.Orders.Empty() {
 			c, _ := Level.Orders.Peek()
@@ -131,8 +131,8 @@ func (ob *OrderBook) FinalContractDeletion() {
 // AddLimitOrdersToOrderBook adds all the orders that exists in the limit order tracker into the main ask and buy heaps if there are any to be added
 func (ob *OrderBook) AddLimitOrdersToOrderBook() {
 	for ob.LimitAsksLevelByLevel.Empty() {
-		lap, LimitAsksBookEmpty := ob.LimitAsksLevelByLevel.Peek()
-		if !LimitAsksBookEmpty {
+		lap, LimitAsksBookNotEmpty := ob.LimitAsksLevelByLevel.Peek()
+		if LimitAsksBookNotEmpty {
 			LimitAskLevel := lap.(*LevelBook)
 			al, _ := ob.AsksLevelByLevel.Peek()
 			AskLevel := al.(*LevelBook)
@@ -149,7 +149,40 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() {
 							if Level.ToBeDeleted[contract.ContractID] != nil {
 								contract.Timestamp = time.Now().UnixMilli()
 								contract.OrderType = "sell"
-								ob.AddContractToAsks(*contract)
+								ob.AddContract(*contract)
+							}
+							Level.NoOfContracts -= contract.Quantity
+							Level.Orders.Dequeue()
+						}
+						// Delete the LevelBook from the LimitAsksOrderByOrder
+						delete(ob.LimitAsksOrderByOrder, price)
+					}
+				}
+			} else {
+				break
+			}
+		}
+	}
+	for ob.LimitBidsLevelByLevel.Empty() {
+		lbp, LimitBidsBookNotEmpty := ob.LimitBidsLevelByLevel.Peek()
+		if LimitBidsBookNotEmpty {
+			LimitBidsLevel := lbp.(*LevelBook)
+			bl, _ := ob.BidsLevelByLevel.Peek()
+			BidsLevel := bl.(*LevelBook)
+
+			// Check if the Top price in the LimitBook is valid inorder to be added into the Ask Book
+			// i.e. LimitAskLevel.Peek().Price<= AskLevel.Peek().Price
+			if LimitBidsLevel.Price >= BidsLevel.Price {
+				for price, Level := range ob.LimitBidsOrderByOrder {
+					if price >= BidsLevel.Price {
+						// Add all the contracts from the LimitAsksOrderByOrder to the AsksOrderByOrder
+						for Level.Orders.Empty() {
+							c, _ := Level.Orders.Peek()
+							contract := c.(*models.Contract)
+							if Level.ToBeDeleted[contract.ContractID] != nil {
+								contract.Timestamp = time.Now().UnixMilli()
+								contract.OrderType = "sell"
+								ob.AddContract(*contract)
 							}
 							Level.NoOfContracts -= contract.Quantity
 							Level.Orders.Dequeue()
@@ -179,23 +212,24 @@ func (ob *OrderBook) MergeTopPrices() {
 			for !lowestAskLevel.Orders.Empty() && !highestBidLevel.Orders.Empty() {
 				lowestAskContract, _ := lowestAskLevel.Orders.Peek()
 				highestBidContract, _ := highestBidLevel.Orders.Peek()
-
-				if lowestAskContract.(*models.Contract).Quantity == highestBidContract.(*models.Contract).Quantity {
+				lac := lowestAskContract.(*models.Contract)
+				hbl := highestBidContract.(*models.Contract)
+				if lac.Quantity == hbl.Quantity {
 					lowestAskLevel.Orders.Dequeue()
 					highestBidLevel.Orders.Dequeue()
-					lowestAskLevel.NoOfContracts -= lowestAskContract.(*models.Contract).Quantity
-					highestBidLevel.NoOfContracts -= highestBidContract.(*models.Contract).Quantity
-					logHandler(lowestAskContract.(*models.Contract), highestBidContract.(*models.Contract))
-				} else if lowestAskContract.(*models.Contract).Quantity < highestBidContract.(*models.Contract).Quantity {
+					lowestAskLevel.NoOfContracts -= lac.Quantity
+					highestBidLevel.NoOfContracts -= hbl.Quantity
+					ob.LogHandler(lac, hbl)
+				} else if lac.Quantity < hbl.Quantity {
 					lowestAskLevel.Orders.Dequeue()
-					highestBidContract.(*models.Contract).Quantity -= lowestAskContract.(*models.Contract).Quantity
-					lowestAskLevel.NoOfContracts -= lowestAskContract.(*models.Contract).Quantity
-					logHandler(lowestAskContract.(*models.Contract), highestBidContract.(*models.Contract))
+					hbl.Quantity -= lac.Quantity
+					lowestAskLevel.NoOfContracts -= lac.Quantity
+					ob.LogHandler(lac, hbl)
 				} else {
 					highestBidLevel.Orders.Dequeue()
-					lowestAskContract.(*models.Contract).Quantity -= highestBidContract.(*models.Contract).Quantity
-					highestBidLevel.NoOfContracts -= highestBidContract.(*models.Contract).Quantity
-					logHandler(lowestAskContract.(*models.Contract), highestBidContract.(*models.Contract))
+					lac.Quantity -= hbl.Quantity
+					highestBidLevel.NoOfContracts -= hbl.Quantity
+					ob.LogHandler(lac, hbl)
 				}
 			}
 		}

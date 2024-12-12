@@ -56,6 +56,7 @@ func ModifyOrder(c *gin.Context) {
 	ob.PushContractIntoQueue(contractForModification)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})
+}
 
 // GetOrderBook returns the current state of the order book
 //func GetOrderBook(c *gin.Context) {

@@ -185,14 +185,17 @@ func (ob *OrderBook) MergeTopPrices() {
 					highestBidLevel.Orders.Dequeue()
 					lowestAskLevel.NoOfContracts -= lowestAskContract.(*models.Contract).Quantity
 					highestBidLevel.NoOfContracts -= highestBidContract.(*models.Contract).Quantity
+					logHandler(lowestAskContract.(*models.Contract), highestBidContract.(*models.Contract))
 				} else if lowestAskContract.(*models.Contract).Quantity < highestBidContract.(*models.Contract).Quantity {
 					lowestAskLevel.Orders.Dequeue()
 					highestBidContract.(*models.Contract).Quantity -= lowestAskContract.(*models.Contract).Quantity
 					lowestAskLevel.NoOfContracts -= lowestAskContract.(*models.Contract).Quantity
+					logHandler(lowestAskContract.(*models.Contract), highestBidContract.(*models.Contract))
 				} else {
 					highestBidLevel.Orders.Dequeue()
 					lowestAskContract.(*models.Contract).Quantity -= highestBidContract.(*models.Contract).Quantity
 					highestBidLevel.NoOfContracts -= highestBidContract.(*models.Contract).Quantity
+					logHandler(lowestAskContract.(*models.Contract), highestBidContract.(*models.Contract))
 				}
 			}
 		}

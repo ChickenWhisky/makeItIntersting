@@ -142,8 +142,8 @@ Here’s a summary of the key database tables involved in the implementation:
 
 ### Key Features Implemented
 
-- **User Management**: Registration, login, balance, and simulated fund transfers.
-- **Order Book**: Users can place and cancel orders for contracts.
-- **Real-Time Matching Engine**: Handles partial and full matching of contracts.
-- **Price History Tracking**: Logs matched prices for each event and exposes this data via REST APIs.
-- **Event Management**: Admins create events and resolve outcomes, with user balances updated accordingly.
+- [ ] **User Management**: Registration, login, balance, and simulated fund transfers.
+- [ ] **Order Book**: Users can place and cancel orders for contracts.
+- [ ] **Real-Time Matching Engine**: Handles partial and full matching of contracts.
+- [ ] **Price History Tracking**: Logs matched prices for each event and exposes this data via REST APIs.
+- [ ] **Event Management**: Admins create events and resolve outcomes, with user balances updated accordingly.

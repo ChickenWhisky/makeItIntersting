@@ -156,11 +156,6 @@ func (ob *OrderBook) ModifyContract(contract models.Contract) {
 	ob.AddContract(contract)
 }
 
-// AddLimitOrdersToOrderBook adds all the orders that exists in the limit order tracker into the main ask and buy heaps if there are any to be added
-func (ob *OrderBook) AddLimitOrdersToOrderBook() {
-	ob
-}
-
 // MatchOrders matches the highest bid with the lowest ask.
 func (ob *OrderBook) MatchOrders() {
 

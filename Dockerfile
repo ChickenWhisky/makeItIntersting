@@ -15,7 +15,7 @@
     RUN go mod download
 
     COPY . .
-    RUN go build -o /app/bin/myapp ./cmd/app
+    RUN go build -o /app/bin/myapp .
 
     # ---- Deploy Stage ----
 

@@ -2,19 +2,23 @@ package helpers
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"log"
+	"math/big"
 	"os"
 	"strconv"
 )
 
 func GenerateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, length)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
+	for i := range b {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			log.Fatal(err)
+		}
+		b[i] = charset[num.Int64()]
 	}
-	return base64.StdEncoding.EncodeToString(b)
+	return string(b)
 }
 func ConvertStringToInt(s string) int {
 	lengthFromEnv, err := strconv.Atoi(os.Getenv("CONTRACT_ID_LENGTH"))

@@ -35,10 +35,9 @@ type OrderBook struct {
 	LimitBidsOrderByOrder map[float32]*LevelBook      // Same except for Limit Order Bids
 	IncomingContracts     chan models.Contract        // Channel to stream incoming orders
 	Orders                map[string]*models.Contract // A map to extract any existing order
-	//ToBeDeletedOrders     map[string]*models.Contract // A map to keep track of
-	ToBeDeletedLevels map[string]*LevelBook // A map to keep track of Levels to be deleted
-	LastMatchedPrices []models.Trade
-	Lock              sync.Mutex
+	ToBeDeletedLevels     map[string]*LevelBook       // A map to keep track of Levels to be deleted
+	LastMatchedPrices     []models.Trade              // Struct to keep track of last matched prices
+	Lock                  sync.Mutex                  // Mutex (Maybe removed if not required)
 }
 
 // NewOrderBook creates a new empty order book.
@@ -101,9 +100,9 @@ func (ob *OrderBook) AddContract(contract models.Contract) error {
 	case "buy":
 		ob.AddContractToBids(contract)
 	case "limit_buy":
-		ob.AddContractToLimitAsks(contract)
-	case "limit_sell":
 		ob.AddContractToLimitBids(contract)
+	case "limit_sell":
+		ob.AddContractToLimitAsks(contract)
 	default:
 		return errors.New("invalid order type")
 	}

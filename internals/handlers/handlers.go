@@ -62,8 +62,12 @@ func ModifyOrder(c *gin.Context) {
 // GetLastTrades returns the current state of the order book
 func GetLastTrades(c *gin.Context) {
 	lastTradedPrices := ob.GetLastTrades()
-	for _, trade := range *lastTradedPrices {
-		c.JSON(http.StatusOK, trade)
+	if len(*lastTradedPrices) != 0 {
+		for _, trade := range *lastTradedPrices {
+			c.JSON(http.StatusOK, trade)
+		}
+	} else {
+		c.JSON(http.StatusOK, gin.H{"message": "No trades in the system"})
 	}
 }
 

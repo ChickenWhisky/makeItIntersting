@@ -13,7 +13,7 @@ func (ob *OrderBook) AddContractToAsks(contract models.Contract) {
 	requiredLevel, existsInOrderBook := ob.AsksOrderByOrder[contract.Price]
 	if existsInOrderBook {
 		requiredLevel.NoOfContracts += contract.Quantity
-		requiredLevel.Orders.Enqueue(contract)
+		requiredLevel.Orders.Enqueue(&contract)
 		requiredLevel.Contracts[contract.ContractID] = &contract
 	} else {
 
@@ -26,7 +26,9 @@ func (ob *OrderBook) AddContractToAsks(contract models.Contract) {
 			ToBeDeleted:   make(map[string]*models.Contract),
 			Contracts:     make(map[string]*models.Contract),
 		}
-		newLevel.Orders.Enqueue(contract)
+		newLevel.Contracts[contract.ContractID] = &contract
+		newLevel.Orders.Enqueue(&contract)
+		ob.AsksOrderByOrder[contract.Price] = newLevel
 		ob.AsksLevelByLevel.Enqueue(newLevel)
 	}
 
@@ -37,7 +39,7 @@ func (ob *OrderBook) AddContractToBids(contract models.Contract) {
 	requiredLevel, existsInOrderBook := ob.BidsOrderByOrder[contract.Price]
 	if existsInOrderBook {
 		requiredLevel.NoOfContracts += contract.Quantity
-		requiredLevel.Orders.Enqueue(contract)
+		requiredLevel.Orders.Enqueue(&contract)
 		requiredLevel.Contracts[contract.ContractID] = &contract
 	} else {
 
@@ -50,7 +52,9 @@ func (ob *OrderBook) AddContractToBids(contract models.Contract) {
 			ToBeDeleted:   make(map[string]*models.Contract),
 			Contracts:     make(map[string]*models.Contract),
 		}
-		newLevel.Orders.Enqueue(contract)
+		newLevel.Contracts[contract.ContractID] = &contract
+		newLevel.Orders.Enqueue(&contract)
+		ob.BidsOrderByOrder[contract.Price] = newLevel
 		ob.BidsLevelByLevel.Enqueue(newLevel)
 	}
 
@@ -60,7 +64,7 @@ func (ob *OrderBook) AddContractToLimitAsks(contract models.Contract) {
 	requiredLevel, existsInOrderBook := ob.LimitAsksOrderByOrder[contract.Price]
 	if existsInOrderBook {
 		requiredLevel.NoOfContracts += contract.Quantity
-		requiredLevel.Orders.Enqueue(contract)
+		requiredLevel.Orders.Enqueue(&contract)
 		requiredLevel.Contracts[contract.ContractID] = &contract
 	} else {
 
@@ -73,7 +77,9 @@ func (ob *OrderBook) AddContractToLimitAsks(contract models.Contract) {
 			ToBeDeleted:   make(map[string]*models.Contract),
 			Contracts:     make(map[string]*models.Contract),
 		}
-		newLevel.Orders.Enqueue(contract)
+		newLevel.Contracts[contract.ContractID] = &contract
+		newLevel.Orders.Enqueue(&contract)
+		ob.LimitAsksOrderByOrder[contract.Price] = newLevel
 		ob.LimitAsksLevelByLevel.Enqueue(newLevel)
 	}
 }
@@ -82,7 +88,7 @@ func (ob *OrderBook) AddContractToLimitBids(contract models.Contract) {
 	requiredLevel, existsInOrderBook := ob.LimitBidsOrderByOrder[contract.Price]
 	if existsInOrderBook {
 		requiredLevel.NoOfContracts += contract.Quantity
-		requiredLevel.Orders.Enqueue(contract)
+		requiredLevel.Orders.Enqueue(&contract)
 		requiredLevel.Contracts[contract.ContractID] = &contract
 	} else {
 
@@ -95,7 +101,9 @@ func (ob *OrderBook) AddContractToLimitBids(contract models.Contract) {
 			ToBeDeleted:   make(map[string]*models.Contract),
 			Contracts:     make(map[string]*models.Contract),
 		}
-		newLevel.Orders.Enqueue(contract)
+		newLevel.Contracts[contract.ContractID] = &contract
+		newLevel.Orders.Enqueue(&contract)
+		ob.LimitBidsOrderByOrder[contract.Price] = newLevel
 		ob.LimitBidsLevelByLevel.Enqueue(newLevel)
 	}
 }

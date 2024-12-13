@@ -15,13 +15,13 @@ import (
 // OrderBook stores order data and handles order processing.
 
 type LevelBook struct {
-	LevelID       string                      // LevelBook ID
-	Price         float32                     // Price at that LevelBook
-	Type          bool                        // Ask(true) or Bid(false) for setting up the comparator for the hashmap
-	NoOfContracts int64                       // If 0 then simply delete struct from parent hashmap
-	Orders        *priorityqueue.Queue        // Meant to keep order of contracts based on TimeStamps
-	Contracts     map[string]*models.Contract // Keep track of contracts in order to get instant data
-	ToBeDeleted   map[string]*models.Contract // For tracking what needs to be deleted
+	LevelID       string                      `json:"level_id"`      // LevelBook ID
+	Price         float32                     `json:"price"`         // Price at that LevelBook
+	Type          bool                        `json:"type"`          // Ask(true) or Bid(false) for setting up the comparator for the hashmap
+	NoOfContracts int64                       `json:"noOfContracts"` // If 0 then simply delete struct from parent hashmap
+	Orders        *priorityqueue.Queue        `json:"orders"`        // Meant to keep order of contracts based on TimeStamps
+	Contracts     map[string]*models.Contract `json:"contracts"`     // Keep track of contracts in order to get instant data
+	ToBeDeleted   map[string]*models.Contract `json:"toBeDeleted"`   // For tracking what needs to be deleted
 }
 
 type OrderBook struct {
@@ -68,14 +68,20 @@ func (ob *OrderBook) StartProcessing() {
 	go func() {
 		for contract := range ob.IncomingContracts {
 			contract.Timestamp = time.Now().UnixMilli()
+			log.Printf("Processing contract: %+v\n", contract)
 			switch contract.RequestType {
 			case "add":
-				ob.AddContract(contract)
+				if err := ob.AddContract(contract); err != nil {
+					log.Printf("Error adding contract: %v\n", err)
+				}
 			case "delete":
-				ob.CancelContract(contract)
+				if err := ob.CancelContract(contract); err != nil {
+					log.Printf("Error deleting contract: %v\n", err)
+				}
+			default:
+				log.Printf("Unknown request type: %s\n", contract.RequestType)
 			}
 		}
-
 	}()
 }
 
@@ -93,7 +99,7 @@ func (ob *OrderBook) AddContract(contract models.Contract) error {
 	case "sell":
 		ob.AddContractToAsks(contract)
 	case "buy":
-		ob.AddContractToAsks(contract)
+		ob.AddContractToBids(contract)
 	case "limit_buy":
 		ob.AddContractToLimitAsks(contract)
 	case "limit_sell":
@@ -167,17 +173,15 @@ func (ob *OrderBook) MatchOrders() {
 	// Now we move on to seeing if the top most bids will match or not
 	lal, doAsksExist := ob.AsksLevelByLevel.Peek()
 	hbl, doBidsExist := ob.BidsLevelByLevel.Peek()
-	lowestAskLevel := lal.(*LevelBook)
-	highestBidLevel := hbl.(*LevelBook)
 
 	if doAsksExist && doBidsExist {
+		lowestAskLevel := lal.(*LevelBook)
+		highestBidLevel := hbl.(*LevelBook)
 		if lowestAskLevel.Price <= highestBidLevel.Price {
-
 			ob.MergeTopPrices()
 		}
 	} else {
 		return
-
 	}
 
 }

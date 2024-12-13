@@ -2,6 +2,7 @@ package orderbook
 
 import (
 	"encoding/json"
+	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 	"log"
 	"os"
@@ -11,7 +12,7 @@ import (
 func (ob *OrderBook) LogHandler(lowestAskContract *models.Contract, highestBidContract *models.Contract) {
 	// Log the trade
 	trade := models.Trade{
-		TradeID:          "some_unique_trade_id", // You need to generate a unique ID
+		TradeID:          helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("TRADE_ID_LENGTH"))),
 		SellerUserID:     lowestAskContract.UserID,
 		SellerContractID: lowestAskContract.ContractID,
 		BuyerUserID:      highestBidContract.UserID,

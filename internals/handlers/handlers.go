@@ -29,7 +29,7 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 	contract.Timestamp = time.Now().UnixMilli()
-	ob.AddContract(contract)
+	ob.PushContractIntoQueue(contract)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "contract": contract})
 }
@@ -41,7 +41,7 @@ func CancelOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ob.CancelContract(contractForCancellation)
+	ob.PushContractIntoQueue(contractForCancellation)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 
@@ -54,7 +54,7 @@ func ModifyOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ob.ModifyContract(contractForModification)
+	ob.PushContractIntoQueue(contractForModification)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})
 }
@@ -73,6 +73,13 @@ func GetTopOfOrderBook(c *gin.Context) {
 	if len(topOfOrderBook) == 0 {
 		c.JSON(http.StatusOK, gin.H{"message": "No orders in the system"})
 		return
+	} else if len(topOfOrderBook) == 1 {
+		firstLevel := topOfOrderBook[0]
+		if firstLevel.Type {
+			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_ask": firstLevel})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_bid": firstLevel})
+		}
 	} else {
 		firstLevel := topOfOrderBook[0]
 		secondLevel := topOfOrderBook[1]

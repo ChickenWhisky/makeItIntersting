@@ -29,7 +29,7 @@ func LevelByLevel(a, b interface{}) int {
 }
 
 func TimeBased(a, b interface{}) int {
-	timeA := a.(models.Contract).Timestamp
-	timeB := b.(models.Contract).Timestamp
-	return utils.IntComparator(timeA, timeB)
+	timeA := a.(*models.Contract).Timestamp
+	timeB := b.(*models.Contract).Timestamp
+	return utils.Int64Comparator(timeA, timeB)
 }

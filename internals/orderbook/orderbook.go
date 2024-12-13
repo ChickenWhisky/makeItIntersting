@@ -153,7 +153,9 @@ func (ob *OrderBook) CancelContract(contract models.Contract) error {
 
 // ModifyContract cancels a specific user's contract and then adds a new contract based on the updated modifications.
 func (ob *OrderBook) ModifyContract(contract models.Contract) {
+	contract.RequestType = "delete"
 	ob.CancelContract(contract)
+	contract.RequestType = "add"
 	ob.AddContract(contract)
 }
 

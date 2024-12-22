@@ -11,7 +11,7 @@
     WORKDIR /app
     
     # Cache dependencies first by copying go.mod and go.sum separately
-    COPY go.mod go.sum ./
+    COPY go.mod go.sum .env ./
     RUN go mod download
 
     COPY . .
@@ -23,6 +23,6 @@
 
     WORKDIR /app
     COPY --from=builder /app/bin/myapp /app/myapp
-    EXPOSE 8080
+    EXPOSE 8000
     ENTRYPOINT ["/app/myapp"]
     

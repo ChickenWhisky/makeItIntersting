@@ -153,13 +153,14 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() {
 			// Check if the Top price in the LimitBook is valid inorder to be added into the Ask Book
 			// i.e. LimitAskLevel.Peek().Price<= AskLevel.Peek().Price
 			if LimitAskLevel.Price <= AskLevel.Price {
+				log.Printf("Loop in AddLimitToOrderBook Asks (1)")
 				for price, Level := range ob.LimitAsksOrderByOrder {
 					if price <= AskLevel.Price {
 						// Add all the contracts from the LimitAsksOrderByOrder to the AsksOrderByOrder
-						for Level.Orders.Empty() {
+						for !Level.Orders.Empty() {
 							c, _ := Level.Orders.Peek()
 							contract := c.(*models.Contract)
-							if Level.ToBeDeleted[contract.ContractID] != nil {
+							if Level.ToBeDeleted[contract.ContractID] == nil {
 								contract.Timestamp = time.Now().UnixMilli()
 								contract.OrderType = "sell"
 								ob.AddContract(*contract)
@@ -172,8 +173,11 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() {
 					}
 				}
 			} else {
+				log.Printf("Loop in AddLimitToOrderBook Asks (2)")
 				break
 			}
+		} else {
+			break
 		}
 	}
 	for !ob.LimitBidsLevelByLevel.Empty() {
@@ -190,13 +194,14 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() {
 			// Check if the Top price in the LimitBook is valid inorder to be added into the Ask Book
 			// i.e. LimitAskLevel.Peek().Price<= AskLevel.Peek().Price
 			if LimitBidsLevel.Price >= BidsLevel.Price {
+				log.Printf("Loop in AddLimitToOrderBook Bids (1)")
 				for price, Level := range ob.LimitBidsOrderByOrder {
 					if price >= BidsLevel.Price {
 						// Add all the contracts from the LimitAsksOrderByOrder to the AsksOrderByOrder
-						for Level.Orders.Empty() {
+						for !Level.Orders.Empty() {
 							c, _ := Level.Orders.Peek()
 							contract := c.(*models.Contract)
-							if Level.ToBeDeleted[contract.ContractID] != nil {
+							if Level.ToBeDeleted[contract.ContractID] == nil {
 								contract.Timestamp = time.Now().UnixMilli()
 								contract.OrderType = "sell"
 								ob.AddContract(*contract)
@@ -209,8 +214,11 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() {
 					}
 				}
 			} else {
+				log.Printf("Loop in AddLimitToOrderBook Bids (2)")
 				break
 			}
+		} else {
+			break
 		}
 	}
 

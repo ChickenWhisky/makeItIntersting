@@ -25,7 +25,7 @@ func PriceTimeBased(a, b interface{}) int {
 	if priceA == priceB {
 		return utils.Int64Comparator(timeA, timeB)
 	} else {
-		if a.(*Contract).OrderType == "buy" {
+		if a.(*Contract).OrderType == "buy" || a.(*Contract).OrderType == "limit_buy" {
 			if priceA < priceB {
 				return -1
 			}
@@ -45,6 +45,7 @@ func PriceTimeBased(a, b interface{}) int {
 	return 0
 }
 
+// NewOrderQueue Creates a new instance of the OrderQueue
 func NewOrderQueue() *OrderQueue {
 	return &OrderQueue{
 		heap:        priorityqueue.NewWith(PriceTimeBased),
@@ -54,6 +55,7 @@ func NewOrderQueue() *OrderQueue {
 	}
 }
 
+// Pop returns the contract fromt the top of the OrderQueue as well as dequeues it from the OrderQueue
 func (oq OrderQueue) Pop() (*Contract, error) {
 	_contract, isPQNotEmpty := oq.heap.Peek()
 	if !isPQNotEmpty {
@@ -75,6 +77,7 @@ func (oq OrderQueue) Pop() (*Contract, error) {
 	return contract, nil
 }
 
+// Push enqueues a contract into the OrderQueue
 func (oq OrderQueue) Push(contract *Contract) error {
 	if oq.orders[contract.ContractID] != nil {
 		return errors.New("contract already exists")
@@ -85,6 +88,7 @@ func (oq OrderQueue) Push(contract *Contract) error {
 	return nil
 }
 
+// Top returns the contract at the top of the OrderQueue
 func (oq OrderQueue) Top() (*Contract, error) {
 	_contract, isPQNotEmpty := oq.heap.Peek()
 	if !isPQNotEmpty {
@@ -101,6 +105,7 @@ func (oq OrderQueue) Top() (*Contract, error) {
 	return contract, nil
 }
 
+// Delete a contract in the OrderQueue with the contract ID
 func (oq OrderQueue) Delete(ID string) error {
 	// Implements a lazy deletion sort of method where only the number of orders is reduced now, but it is kept in the
 	// toBeDeleted map so that when it appears in the top of the pq it is deleted only then. This is simply to abstract away
@@ -118,6 +123,14 @@ func (oq OrderQueue) Delete(ID string) error {
 	oq.noOfOrders--
 	oq.toBeDeleted[ID] = contract
 	return nil
+}
+
+// Find returns a contract within the OrderQueue if it exists
+func (oq OrderQueue) Find(ID string) (*Contract, error) {
+	if oq.orders[ID] == nil {
+		return nil, fmt.Errorf("contract %s does not exist", ID)
+	}
+	return oq.orders[ID], nil
 }
 
 // clear is a function that simply checks if the contract in contention is to be deleted if the clearing is done the bool

@@ -3,8 +3,8 @@ package orderbook
 import (
 	"errors"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
+	"github.com/charmbracelet/log"
 	_ "github.com/joho/godotenv/autoload"
-	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -18,6 +18,7 @@ type OrderBook struct {
 	LimitAsks         *models.OrderQueue          // OrderQueue for LimitAsks
 	LimitBids         *models.OrderQueue          // OrderQueue for LimitBids
 	IncomingContracts chan models.Contract        // Channel to stream incoming orders
+	CompletedTrades   chan models.Trade           // Channel to stream incoming orders
 	Orders            map[string]*models.Contract // A map to extract any existing order
 	LastMatchedPrices []models.Trade              // Struct to keep track of last matched prices
 	Lock              sync.Mutex                  // Mutex (Maybe removed if not required)
@@ -32,32 +33,56 @@ func NewOrderBook() *OrderBook {
 		LimitAsks:         models.NewOrderQueue(),
 		LimitBids:         models.NewOrderQueue(),
 		IncomingContracts: make(chan models.Contract),
+		CompletedTrades:   make(chan models.Trade),
 		Orders:            make(map[string]*models.Contract),
 		LastMatchedPrices: make([]models.Trade, 0),
 		Lock:              sync.Mutex{},
 		ContractNo:        0,
 	}
-	ob.StartProcessing()
+	ob.StartProcessingOrders()
+	ob.StartProcessingTrades()
 	return ob
 }
 
-// StartProcessing tarts up a thread that continuously checks the channel for new contracts to process
-func (ob *OrderBook) StartProcessing() {
+// StartProcessingTrades tarts up a thread that continuously checks the channel for new contracts to process
+func (ob *OrderBook) StartProcessingTrades() {
 	go func() {
 		for contract := range ob.IncomingContracts {
 			contract.SetTimestamp(time.Now().UnixMilli())
-			log.Printf("Processing contract: %+v\n", contract)
+			log.Printf("Processing contract: %+v", contract)
 			switch contract.RequestType {
 			case "add":
 				if err := ob.AddContract(&contract); err != nil {
-					log.Printf("Error adding contract: %v\n", err)
+					log.Printf("Error adding contract: %v", err)
 				}
 			case "delete":
 				if err := ob.CancelContract(&contract); err != nil {
-					log.Printf("Error deleting contract: %v\n", err)
+					log.Printf("Error deleting contract: %v", err)
 				}
 			default:
-				log.Printf("Unknown request type: %s\n", contract.RequestType)
+				log.Printf("Unknown request type: %s", contract.RequestType)
+			}
+		}
+	}()
+}
+
+// StartProcessingOrders tarts up a thread that continuously checks the channel for new contracts to process
+func (ob *OrderBook) StartProcessingOrders() {
+	go func() {
+		for contract := range ob.IncomingContracts {
+			contract.SetTimestamp(time.Now().UnixMilli())
+			log.Printf("Processing contract: %+v", contract)
+			switch contract.RequestType {
+			case "add":
+				if err := ob.AddContract(&contract); err != nil {
+					log.Printf("Error adding contract: %v", err)
+				}
+			case "delete":
+				if err := ob.CancelContract(&contract); err != nil {
+					log.Printf("Error deleting contract: %v", err)
+				}
+			default:
+				log.Printf("Unknown request type: %s", contract.RequestType)
 			}
 		}
 	}()
@@ -70,20 +95,38 @@ func (ob *OrderBook) PushContractIntoQueue(contract models.Contract) {
 // AddContract adds a new contract (order) to the order book and attempts to match orders.
 func (ob *OrderBook) AddContract(contract *models.Contract) error {
 
-	//ob.mu.Lock()
-	//defer ob.mu.Unlock()
 	//contract.ContractID = helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("CONTRACT_ID_LENGTH")))
-	contract.SetContractID(strconv.Itoa(ob.ContractNo))
+
+	newContractID := strconv.Itoa(ob.ContractNo)
+	contract.ContractID = newContractID
+	//log.Infof("New Contract ID: %s ", contract.GetContractID())
 	ob.ContractNo++
 	switch contract.OrderType {
 	case "sell":
-		ob.Asks.Push(contract)
+
+		err := ob.Asks.Push(contract)
+		if err != nil {
+			log.Printf("Error pushing contract into Asks: %v", err)
+		}
+		log.Printf("Pushed contract into Asks: %+v", contract)
 	case "buy":
-		ob.Bids.Push(contract)
+		err := ob.Bids.Push(contract)
+		if err != nil {
+			log.Printf("Error pushing contract into Bids: %v", err)
+		}
+		log.Printf("Pushed contract into Bids: %+v", contract)
 	case "limit_sell":
-		ob.LimitAsks.Push(contract)
+		err := ob.LimitAsks.Push(contract)
+		if err != nil {
+			log.Printf("Error pushing contract into LimitAsks: %v", err)
+		}
+		log.Printf("Pushed contract into LimitAsks: %+v", contract)
 	case "limit_buy":
-		ob.LimitBids.Push(contract)
+		err := ob.LimitBids.Push(contract)
+		if err != nil {
+			log.Printf("Error pushing contract into LimitBids: %v", err)
+		}
+		log.Printf("Pushed contract into LimitBids: %+v", contract)
 	default:
 		return errors.New("invalid order type")
 	}
@@ -122,10 +165,10 @@ func (ob *OrderBook) CancelContract(contract *models.Contract) error {
 			}
 		}
 	} else if !ok {
-		log.Println("Order doesnt exist in the system")
+		log.Printf("Order doesnt exist in the system")
 		return errors.New("order doesnt exist in the system")
 	} else {
-		log.Println("Order doesnt belong to the user :", contract.UserID)
+		log.Printf("Order doesnt belong to the user :", contract.UserID)
 		return errors.New("order doesnt belong to the user")
 	}
 
@@ -179,17 +222,14 @@ func (ob *OrderBook) ModifyContract(contract *models.Contract) error {
 // MatchOrders matches the highest bid with the lowest ask.
 func (ob *OrderBook) MatchOrders() {
 
-	ob.AddLimitOrdersToOrderBook()
-	//// Now we move on to seeing if the top most bids will match or not
-	//lal, doAsksNotExist := ob.Asks.Top()
-	//hbl, doBidsNotExist := ob.Bids.Top()
-	//
-	//if doAsksNotExist != nil && doBidsNotExist != nil {
-	//	if lal.GetPrice() <= hbl.GetPrice() {
-	//
-	//	}
-	//}
-	ob.MergeTopPrices()
+	err1 := ob.AddLimitOrdersToOrderBook()
+	if err1 != nil {
+		log.Printf("Error adding limit orders to order book: %v", err1)
+	}
+	err2 := ob.MergeTopPrices()
+	if err2 != nil {
+		log.Printf("Error merging top prices: %v", err2)
+	}
 }
 
 // GetLastTrades gets the last n traded prices

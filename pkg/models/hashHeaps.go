@@ -3,9 +3,9 @@ package models
 import (
 	"errors"
 	"fmt"
+	"github.com/charmbracelet/log"
 	"github.com/emirpasic/gods/queues/priorityqueue"
 	"github.com/emirpasic/gods/utils"
-	"log"
 )
 
 type OrderQueue struct {
@@ -27,17 +27,17 @@ func PriceTimeBased(a, b interface{}) int {
 	} else {
 		if A.GetOrderType() == "buy" || A.GetOrderType() == "limit_buy" {
 			if A.GetPrice() < B.GetPrice() {
-				return -1
+				return 1
 			}
 			if A.GetPrice() > B.GetPrice() {
-				return 1
+				return -1
 			}
 		} else {
 			if A.GetPrice() > B.GetPrice() {
-				return -1
+				return 1
 			}
 			if A.GetPrice() < B.GetPrice() {
-				return 1
+				return -1
 			}
 
 		}
@@ -56,7 +56,7 @@ func NewOrderQueue() *OrderQueue {
 }
 
 // Pop returns the contract from the top of the OrderQueue as well as dequeues it from the OrderQueue
-func (oq OrderQueue) Pop() (*Contract, error) {
+func (oq *OrderQueue) Pop() (*Contract, error) {
 	_contract, isPQNotEmpty := oq.heap.Peek()
 	if !isPQNotEmpty {
 		return nil, errors.New("order queue is empty")
@@ -78,21 +78,21 @@ func (oq OrderQueue) Pop() (*Contract, error) {
 }
 
 // Empty checks whether the HashHeap is empty or not
-func (oq OrderQueue) Empty() bool {
+func (oq *OrderQueue) Empty() bool {
 	return oq.noOfOrders == 0
 }
 
-func (oq OrderQueue) TopPrice() float32 {
+func (oq *OrderQueue) TopPrice() float32 {
 	_contract, err := oq.Top()
 	if err != nil {
-		log.Printf("Error: %v", err)
+		log.Printf("Error From TopPrice: %v", err)
 		return -1 // Sending -1 as negative pricing doesn't make sense
 	}
 	return _contract.GetPrice()
 }
 
 // Push enqueues a contract into the OrderQueue
-func (oq OrderQueue) Push(contract *Contract) error {
+func (oq *OrderQueue) Push(contract *Contract) error {
 	if oq.orders[contract.GetContractID()] != nil {
 		return errors.New("contract already exists")
 	}
@@ -103,7 +103,7 @@ func (oq OrderQueue) Push(contract *Contract) error {
 }
 
 // Top returns the contract at the top of the OrderQueue
-func (oq OrderQueue) Top() (*Contract, error) {
+func (oq *OrderQueue) Top() (*Contract, error) {
 	_contract, isPQNotEmpty := oq.heap.Peek()
 	if !isPQNotEmpty {
 		return nil, errors.New("order queue is empty")
@@ -120,7 +120,7 @@ func (oq OrderQueue) Top() (*Contract, error) {
 }
 
 // Delete a contract in the OrderQueue with the contract ID
-func (oq OrderQueue) Delete(ID string) error {
+func (oq *OrderQueue) Delete(ID string) error {
 	// Implements a lazy deletion sort of method where only the number of orders is reduced now, but it is kept in the
 	// toBeDeleted map so that when it appears in the top of the pq it is deleted only then. This is simply to abstract away
 	// the deletion of the contract from the queue
@@ -140,7 +140,7 @@ func (oq OrderQueue) Delete(ID string) error {
 }
 
 // Find returns a contract within the OrderQueue if it exists
-func (oq OrderQueue) Find(ID string) (*Contract, error) {
+func (oq *OrderQueue) Find(ID string) (*Contract, error) {
 	if oq.orders[ID] == nil {
 		return nil, fmt.Errorf("contract %s does not exist", ID)
 	}
@@ -149,7 +149,7 @@ func (oq OrderQueue) Find(ID string) (*Contract, error) {
 
 // clear is a function that simply checks if the contract in contention is to be deleted if the clearing is done the bool
 // will be returned as true else it will be returned as false
-func (oq OrderQueue) clear(contract *Contract) bool {
+func (oq *OrderQueue) clear(contract *Contract) bool {
 	if oq.toBeDeleted[contract.GetContractID()] != nil {
 		delete(oq.toBeDeleted, contract.GetContractID())
 		return true

@@ -1,274 +1,92 @@
 package orderbook
 
 import (
-	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
-	"log"
+	"errors"
+	"github.com/charmbracelet/log"
 	"time"
 )
 
-func (ob *OrderBook) FinalLevelDeletion() {
-	for !ob.AsksLevelByLevel.Empty() {
-		log.Printf("Loop in FinalLevelDeletion Asks")
-		l, _ := ob.AsksLevelByLevel.Peek()
-		Level := l.(*LevelBook)
-		_, isLevelToBeDeleted := ob.ToBeDeletedLevels[Level.LevelID]
-		if isLevelToBeDeleted {
-			delete(ob.ToBeDeletedLevels, Level.LevelID)
-			ob.AsksLevelByLevel.Dequeue()
-		} else {
-			break
-		}
-	}
-	for !ob.BidsLevelByLevel.Empty() {
-		log.Printf("Loop in FinalLevelDeletion Bids")
-		l, _ := ob.BidsLevelByLevel.Peek()
-		Level := l.(*LevelBook)
-		_, isLevelToBeDeleted := ob.ToBeDeletedLevels[Level.LevelID]
-		if isLevelToBeDeleted {
-			delete(ob.ToBeDeletedLevels, Level.LevelID)
-			ob.BidsLevelByLevel.Dequeue()
-		} else {
-			break
-		}
-	}
-	for !ob.LimitAsksLevelByLevel.Empty() {
-		log.Printf("Loop in FinalLevelDeletion Limit Asks")
-		l, _ := ob.LimitAsksLevelByLevel.Peek()
-		Level := l.(*LevelBook)
-		_, isLevelToBeDeleted := ob.ToBeDeletedLevels[Level.LevelID]
-		if isLevelToBeDeleted {
-			delete(ob.ToBeDeletedLevels, Level.LevelID)
-			ob.LimitAsksLevelByLevel.Dequeue()
-		} else {
-			break
-		}
-	}
-	for !ob.LimitBidsLevelByLevel.Empty() {
-		log.Printf("Loop in FinalLevelDeletion Limit Bids")
-		l, _ := ob.LimitBidsLevelByLevel.Peek()
-		Level := l.(*LevelBook)
-		_, isLevelToBeDeleted := ob.ToBeDeletedLevels[Level.LevelID]
-		if isLevelToBeDeleted {
-			delete(ob.ToBeDeletedLevels, Level.LevelID)
-			ob.LimitBidsLevelByLevel.Dequeue()
-		} else {
-			break
-		}
-	}
-
-}
-
-func (ob *OrderBook) FinalContractDeletion() {
-
-	l, BidsBookNotEmpty := ob.BidsLevelByLevel.Peek()
-	// Check if the Bids Heap is empty if it is then there is nothing to delete in it
-	if BidsBookNotEmpty {
-		Level := l.(*LevelBook)
-		for !Level.Orders.Empty() {
-			log.Printf("Loop in FinalContractDeletion Bids")
-			c, _ := Level.Orders.Peek()
-			contract := c.(*models.Contract)
-			_, isToBeDeleted := Level.ToBeDeleted[contract.ContractID]
-			if isToBeDeleted {
-				delete(Level.ToBeDeleted, contract.ContractID)
-				Level.Orders.Dequeue()
-				Level.NoOfContracts -= contract.Quantity
-			} else {
-				break
-			}
-		}
-	}
-
-	l, AsksBookNotEmpty := ob.AsksLevelByLevel.Peek()
-	// Check if the Asks Heap is empty if it is then there is nothing to delete in it
-	if AsksBookNotEmpty {
-		Level := l.(*LevelBook)
-		for !Level.Orders.Empty() {
-			log.Printf("Loop in FinalContractDeletion Asks")
-			c, _ := Level.Orders.Peek()
-			contract := c.(*models.Contract)
-			_, isToBeDeleted := Level.ToBeDeleted[contract.ContractID]
-			if isToBeDeleted {
-				delete(Level.ToBeDeleted, contract.ContractID)
-				Level.Orders.Dequeue()
-				Level.NoOfContracts -= contract.Quantity
-			} else {
-				break
-			}
-		}
-	}
-
-	l, LimitBidsBookNotEmpty := ob.LimitBidsLevelByLevel.Peek()
-	// Check if the LimitBids Heap is empty if it is then there is nothing to delete in it
-	if LimitBidsBookNotEmpty {
-		Level := l.(*LevelBook)
-		for !Level.Orders.Empty() {
-			log.Printf("Loop in FinalContractDeletion LimitBids")
-			c, _ := Level.Orders.Peek()
-			contract := c.(*models.Contract)
-			_, isToBeDeleted := Level.ToBeDeleted[contract.ContractID]
-			if isToBeDeleted {
-				delete(Level.ToBeDeleted, contract.ContractID)
-				Level.Orders.Dequeue()
-				Level.NoOfContracts -= contract.Quantity
-			} else {
-				break
-			}
-		}
-	}
-
-	l, LimitAsksBookNotEmpty := ob.LimitAsksLevelByLevel.Peek()
-	// Check if the LimitAsks Heap is empty if it is then there is nothing to delete in it
-	if LimitAsksBookNotEmpty {
-		Level := l.(*LevelBook)
-		for !Level.Orders.Empty() {
-			log.Printf("Loop in FinalContractDeletion LimitAsks")
-			c, _ := Level.Orders.Peek()
-			contract := c.(*models.Contract)
-			_, isToBeDeleted := Level.ToBeDeleted[contract.ContractID]
-			if isToBeDeleted {
-				delete(Level.ToBeDeleted, contract.ContractID)
-				Level.Orders.Dequeue()
-				Level.NoOfContracts -= contract.Quantity
-			} else {
-				break
-			}
-		}
-	}
-}
-
 // AddLimitOrdersToOrderBook adds all the orders that exists in the limit order tracker into the main ask and buy heaps if there are any to be added
-func (ob *OrderBook) AddLimitOrdersToOrderBook() {
-	for !ob.LimitAsksLevelByLevel.Empty() {
-		log.Printf("Loop in AddLimitOrdersToOrderBook LimitAsks")
-		lap, LimitAsksBookNotEmpty := ob.LimitAsksLevelByLevel.Peek()
-		if LimitAsksBookNotEmpty {
-			LimitAskLevel := lap.(*LevelBook)
-			al, AskBookNotEmpty := ob.AsksLevelByLevel.Peek()
-			if !AskBookNotEmpty {
-				break
-			}
-			AskLevel := al.(*LevelBook)
+func (ob *OrderBook) AddLimitOrdersToOrderBook() error {
 
-			// Check if the Top price in the LimitBook is valid inorder to be added into the Ask Book
-			// i.e. LimitAskLevel.Peek().Price<= AskLevel.Peek().Price
-			if LimitAskLevel.Price <= AskLevel.Price {
-				for price, Level := range ob.LimitAsksOrderByOrder {
-					if price <= AskLevel.Price {
-						// Add all the contracts from the LimitAsksOrderByOrder to the AsksOrderByOrder
-						for Level.Orders.Empty() {
-							c, _ := Level.Orders.Peek()
-							contract := c.(*models.Contract)
-							if Level.ToBeDeleted[contract.ContractID] != nil {
-								contract.Timestamp = time.Now().UnixMilli()
-								contract.OrderType = "sell"
-								ob.AddContract(*contract)
-							}
-							Level.NoOfContracts -= contract.Quantity
-							Level.Orders.Dequeue()
-						}
-						// Delete the LevelBook from the LimitAsksOrderByOrder
-						delete(ob.LimitAsksOrderByOrder, price)
-					}
-				}
-			} else {
-				break
+	//lowestAsk, err1 := ob.Asks.Top()
+	log.Print("Starting Function: AddLimitOrdersToOrderBook")
+	lowestAsk, _ := ob.Asks.Top()
+
+	if ob.LimitAsks.TopPrice() != -1 {
+		for ob.LimitAsks.TopPrice() <= lowestAsk.GetPrice() {
+			topLimitAsks, err := ob.LimitAsks.Pop()
+			if err != nil {
+
+				return errors.New("Error popping limit asks")
 			}
+			topLimitAsks.SetOrderType("sell")
+			topLimitAsks.SetTimestamp(time.Now().UnixMilli())
+			ob.AddContract(topLimitAsks)
 		}
 	}
-	for !ob.LimitBidsLevelByLevel.Empty() {
-		log.Printf("Loop in AddLimitOrdersToOrderBook LimitBids")
-		lbp, LimitBidsBookNotEmpty := ob.LimitBidsLevelByLevel.Peek()
-		if LimitBidsBookNotEmpty {
-			LimitBidsLevel := lbp.(*LevelBook)
-			bl, BidBookNotEmpty := ob.BidsLevelByLevel.Peek()
-			if !BidBookNotEmpty {
-				break
-			}
-			BidsLevel := bl.(*LevelBook)
+	highestBid, _ := ob.Bids.Top()
+	//highestBid, err2 := ob.Bids.Top()
 
-			// Check if the Top price in the LimitBook is valid inorder to be added into the Ask Book
-			// i.e. LimitAskLevel.Peek().Price<= AskLevel.Peek().Price
-			if LimitBidsLevel.Price >= BidsLevel.Price {
-				for price, Level := range ob.LimitBidsOrderByOrder {
-					if price >= BidsLevel.Price {
-						// Add all the contracts from the LimitAsksOrderByOrder to the AsksOrderByOrder
-						for Level.Orders.Empty() {
-							c, _ := Level.Orders.Peek()
-							contract := c.(*models.Contract)
-							if Level.ToBeDeleted[contract.ContractID] != nil {
-								contract.Timestamp = time.Now().UnixMilli()
-								contract.OrderType = "sell"
-								ob.AddContract(*contract)
-							}
-							Level.NoOfContracts -= contract.Quantity
-							Level.Orders.Dequeue()
-						}
-						// Delete the LevelBook from the LimitAsksOrderByOrder
-						delete(ob.LimitAsksOrderByOrder, price)
-					}
-				}
-			} else {
-				break
+	if ob.LimitBids.TopPrice() != -1 {
+		for ob.LimitBids.TopPrice() >= highestBid.GetPrice() {
+			topLimitBids, err := ob.LimitBids.Pop()
+			if err != nil {
+				return errors.New("Error popping limit bids")
 			}
+			topLimitBids.SetOrderType("buy")
+			topLimitBids.SetTimestamp(time.Now().UnixMilli())
+			ob.AddContract(topLimitBids)
 		}
 	}
-
+	log.Print("Ending Function: AddLimitOrdersToOrderBook")
+	return nil
 }
 
 // MergeTopPrices takes and merges contracts in the top of the ask books and the bid books
-func (ob *OrderBook) MergeTopPrices() {
-	lal, doAsksExist := ob.AsksLevelByLevel.Peek()
-	hbl, doBidsExist := ob.BidsLevelByLevel.Peek()
+func (ob *OrderBook) MergeTopPrices() error {
+	log.Info("Starting Function: MergeTopPrices")
+	lowestAskPrice := ob.Asks.TopPrice()
 
-	if !doAsksExist || !doBidsExist {
-		return
+	highestBidPrice := ob.Bids.TopPrice()
+
+	if lowestAskPrice == -1 || highestBidPrice == -1 {
+		log.Infof("Ask Price: %v, Bid Price: %v", lowestAskPrice, highestBidPrice)
+		return errors.New("No contracts to merge")
 	}
 
-	lowestAskLevel := lal.(*LevelBook)
-	highestBidLevel := hbl.(*LevelBook)
-
-	for !lowestAskLevel.Orders.Empty() && !highestBidLevel.Orders.Empty() {
-		lowestAskContract, _ := lowestAskLevel.Orders.Peek()
-		highestBidContract, _ := highestBidLevel.Orders.Peek()
-		lac := lowestAskContract.(*models.Contract)
-		hbc := highestBidContract.(*models.Contract)
-
-		if lowestAskLevel.ToBeDeleted[lac.ContractID] == nil && highestBidLevel.ToBeDeleted[hbc.ContractID] == nil {
-			log.Printf("We do enter here!!")
-			if lac.Quantity == hbc.Quantity {
-				log.Printf("(1)")
-				lowestAskLevel.Orders.Dequeue()
-				highestBidLevel.Orders.Dequeue()
-				lowestAskLevel.NoOfContracts -= lac.Quantity
-				highestBidLevel.NoOfContracts -= hbc.Quantity
-				ob.LogHandler(lac, hbc)
-			} else if lac.Quantity < hbc.Quantity {
-				log.Printf("(2)")
-				lowestAskLevel.Orders.Dequeue()
-				hbc.Quantity -= lac.Quantity
-				lowestAskLevel.NoOfContracts -= lac.Quantity
-				ob.LogHandler(lac, hbc)
-			} else {
-				log.Printf("(3)")
-				highestBidLevel.Orders.Dequeue()
-				lac.Quantity -= hbc.Quantity
-				highestBidLevel.NoOfContracts -= hbc.Quantity
-				ob.LogHandler(lac, hbc)
-			}
-		} else {
-			if lowestAskLevel.ToBeDeleted[lac.ContractID] != nil {
-				log.Printf("Contract: %s\n Just deleted :O", lac.ContractID)
-				lowestAskLevel.Orders.Dequeue()
-				lowestAskLevel.NoOfContracts -= lac.Quantity
-			}
-			if highestBidLevel.ToBeDeleted[hbc.ContractID] != nil {
-				log.Printf("Contract: %s\n Just deleted :O", hbc.ContractID)
-				highestBidLevel.Orders.Dequeue()
-				highestBidLevel.NoOfContracts -= hbc.Quantity
-			}
-			log.Printf("Checking for a loop lmao")
+	log.Infof("Ask Price: %v, Bid Price: %v", lowestAskPrice, highestBidPrice)
+	for ob.Asks.TopPrice() <= ob.Bids.TopPrice() {
+		log.Infof("Ask Price: %v, Bid Price: %v", ob.Asks.TopPrice(), ob.Bids.TopPrice())
+		if ob.Asks.TopPrice() == -1 || ob.Bids.TopPrice() == -1 {
+			break
 		}
+		_lowestAsk, err1 := ob.Asks.Top()
+		_highestBid, err2 := ob.Bids.Top()
+		if err1 != nil || err2 != nil {
+			return err1
+		}
+		var NoOfcontracts int64 = 0
+		if _lowestAsk.GetQuantity() == _highestBid.GetQuantity() {
+			lowestAsk, _ := ob.Asks.Pop()
+			highestBid, _ := ob.Bids.Pop()
+			NoOfcontracts = _lowestAsk.GetQuantity()
+			ob.LogHandler(lowestAsk, highestBid)
+		} else if _lowestAsk.GetQuantity() < _highestBid.GetQuantity() {
+			lowestAsk, _ := ob.Asks.Pop()
+			highestBid, _ := ob.Bids.Top()
+			NoOfcontracts = highestBid.GetQuantity() - lowestAsk.GetQuantity()
+			highestBid.SetQuantity(highestBid.GetQuantity() - lowestAsk.GetQuantity())
+			ob.LogHandler(lowestAsk, highestBid)
+		} else {
+			lowestAsk, _ := ob.Asks.Top()
+			highestBid, _ := ob.Bids.Pop()
+			NoOfcontracts = lowestAsk.GetQuantity() - highestBid.GetQuantity()
+			lowestAsk.SetQuantity(lowestAsk.GetQuantity() - highestBid.GetQuantity())
+			ob.LogHandler(lowestAsk, highestBid)
+		}
+		log.Printf("\nAsk_Price : %v\n Bid_Price : %v\n Contracts : %v", _lowestAsk.GetPrice(), _highestBid.GetPrice(), NoOfcontracts)
 	}
-	log.Printf("Matched %v with %v", lowestAskLevel.Price, highestBidLevel.Price)
+	log.Info("Ending Function: MergeTopPrices")
+	return nil
 }

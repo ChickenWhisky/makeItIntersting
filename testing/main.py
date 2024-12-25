@@ -6,16 +6,16 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Config for the frequency of deletions (e.g., 20% chance of deletion)
-DELETE_PROBABILITY = 0.2
+DELETE_PROBABILITY = 0
 API_URL = "http://localhost:8000/order"
 ORDERBOOK_URL = "http://localhost:8000/orderbook"
 
 # Random values range
-MIN_PRICE = 45
-MAX_PRICE = 60
-MIN_QUANTITY = 5
-MAX_QUANTITY = 20
-USER_RANGE = 10
+MIN_PRICE = 50
+MAX_PRICE = 55
+MIN_QUANTITY = 100
+MAX_QUANTITY = 1000
+USER_RANGE = 100
 
 # Configure logging
 logging.basicConfig(
@@ -28,12 +28,17 @@ logging.basicConfig(
 # Function to send a POST (add order) request
 def send_post_request():
     user_id = random.randint(1, USER_RANGE)
-    order_type = random.choice(["buy", "sell"])
-    price = random.randint(MIN_PRICE, MAX_PRICE)
+    order_type = random.choice(["buy", "sell","limit_buy", "limit_sell"])
+#     order_type = random.choice(["buy", "sell"])
+    if order_type == "limit_buy" or order_type == "buy":
+        price = random.randint(MIN_PRICE, MAX_PRICE)
+    else:
+        price = random.randint(MAX_PRICE-3, MAX_PRICE+5)
     quantity = random.randint(MIN_QUANTITY, MAX_QUANTITY)
 
     order = {
         "user_id": str(user_id),
+        "request_type":"add",
         "order_type": order_type,
         "price": price,
         "quantity": quantity
@@ -58,6 +63,7 @@ def send_delete_request():
 
     order = {
         "user_id": str(user_id),
+        "request_type":"delete",
         "order_type": order_type,
         "price": price
     }
@@ -125,25 +131,37 @@ def check_order_book():
 # Main function to manage concurrency
 def simulate_trading(num_requests):
     order_count = 0
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = []
-        
-        for _ in range(num_requests):
-            # Randomly choose between sending a POST or DELETE request
-            if random.random() < DELETE_PROBABILITY:
-                futures.append(executor.submit(send_delete_request))
-            else:
-                futures.append(executor.submit(send_post_request))
-            
-            order_count += 1
+    for _ in range(num_requests):
+        # Randomly choose between sending a POST or DELETE request
+        if random.random() < DELETE_PROBABILITY:
+            send_delete_request()
+        else:
+            send_post_request()
 
-            # Every 50 orders, check the order book
-            if order_count % 50 == 0:
-                futures.append(executor.submit(check_order_book))
-            
-        # Wait for all the futures to complete
-        for future in as_completed(futures):
-            future.result()
+        order_count += 1
+
+#         # Every 50 orders, check the order book
+#         if order_count % 50 == 0:
+#             futures.append(executor.submit(check_order_book))
+#     with ThreadPoolExecutor(max_workers=10) as executor:
+#         futures = []
+#
+#         for _ in range(num_requests):
+#             # Randomly choose between sending a POST or DELETE request
+#             if random.random() < DELETE_PROBABILITY:
+#                 futures.append(executor.submit(send_delete_request))
+#             else:
+#                 futures.append(executor.submit(send_post_request))
+#
+#             order_count += 1
+#
+#             # Every 50 orders, check the order book
+#             if order_count % 50 == 0:
+#                 futures.append(executor.submit(check_order_book))
+#
+#         # Wait for all the futures to complete
+#         for future in as_completed(futures):
+#             future.result()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simulate trading by sending POST and DELETE requests.")

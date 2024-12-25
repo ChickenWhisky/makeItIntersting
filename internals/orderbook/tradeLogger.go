@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
-	"log"
+	"github.com/charmbracelet/log"
 	"os"
 	"time"
 )
@@ -24,24 +24,24 @@ func (ob *OrderBook) LogHandler(lowestAskContract *models.Contract, highestBidCo
 	ob.LastMatchedPrices = append(ob.LastMatchedPrices, trade)
 	file, err := os.OpenFile("trades.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Println("Error opening file:", err)
+		log.Printf("Error opening file:", err)
 		return
 	}
 	defer file.Close()
 
 	tradeJSON, err := json.Marshal(trade)
 	if err != nil {
-		log.Println("Error marshalling trade to JSON:", err)
+		log.Printf("Error marshalling trade to JSON:", err)
 		return
 	}
 
 	if _, err := file.Write(tradeJSON); err != nil {
-		log.Println("Error writing trade to file:", err)
+		log.Printf("Error writing trade to file:", err)
 		return
 	}
 
 	if _, err := file.WriteString("\n"); err != nil {
-		log.Println("Error writing newline to file:", err)
+		log.Printf("Error writing newline to file:", err)
 		return
 	}
 }

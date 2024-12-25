@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/ChickenWhisky/makeItIntersting/internals/orderbook"
+	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 	"net/http"
 	"time"
@@ -17,8 +18,8 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/order", CreateOrder)
 	router.PUT("/order", ModifyOrder)
 	router.DELETE("/order", CancelOrder)
-	router.GET("/trades", GetLastTrades)
-	router.GET("/top", GetTopOfOrderBook)
+	router.GET("/trades/:noOfContracts", GetLastTrades)
+	//router.GET("/top/", GetTopOfOrderBook)
 }
 
 // CreateOrder handles creating a new order
@@ -61,9 +62,11 @@ func ModifyOrder(c *gin.Context) {
 
 // GetLastTrades returns the current state of the order book
 func GetLastTrades(c *gin.Context) {
-	lastTradedPrices := ob.GetLastTrades()
-	if len(*lastTradedPrices) != 0 {
-		for _, trade := range *lastTradedPrices {
+	_n := c.Param("noOfContracts")
+	n := helpers.ConvertStringToInt(_n)
+	lastTradedPrices := ob.GetLastTrades(n)
+	if len(lastTradedPrices) != 0 {
+		for _, trade := range lastTradedPrices {
 			c.JSON(http.StatusOK, trade)
 		}
 	} else {
@@ -72,25 +75,25 @@ func GetLastTrades(c *gin.Context) {
 }
 
 // GetTopOfOrderBook gets the top ask and bid level details
-func GetTopOfOrderBook(c *gin.Context) {
-	topOfOrderBook := ob.GetTopOfOrderBook()
-	if len(topOfOrderBook) == 0 {
-		c.JSON(http.StatusOK, gin.H{"message": "No orders in the system"})
-		return
-	} else if len(topOfOrderBook) == 1 {
-		firstLevel := topOfOrderBook[0]
-		if firstLevel.Type {
-			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_ask": firstLevel})
-		} else {
-			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_bid": firstLevel})
-		}
-	} else {
-		firstLevel := topOfOrderBook[0]
-		secondLevel := topOfOrderBook[1]
-		if firstLevel.Type {
-			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_ask": firstLevel, "top_bid": secondLevel})
-		} else {
-			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_bid": firstLevel, "top_ask": secondLevel})
-		}
-	}
-}
+//func GetTopOfOrderBook(c *gin.Context) {
+//	topOfOrderBook := ob.GetTopOfOrderBook()
+//	if len(topOfOrderBook) == 0 {
+//		c.JSON(http.StatusOK, gin.H{"message": "No orders in the system"})
+//		return
+//	} else if len(topOfOrderBook) == 1 {
+//		firstLevel := topOfOrderBook[0]
+//		if firstLevel.Type {
+//			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_ask": firstLevel})
+//		} else {
+//			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_bid": firstLevel})
+//		}
+//	} else {
+//		firstLevel := topOfOrderBook[0]
+//		secondLevel := topOfOrderBook[1]
+//		if firstLevel.Type {
+//			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_ask": firstLevel, "top_bid": secondLevel})
+//		} else {
+//			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_bid": firstLevel, "top_ask": secondLevel})
+//		}
+//	}
+//}

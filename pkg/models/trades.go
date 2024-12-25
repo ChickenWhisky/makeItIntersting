@@ -2,7 +2,7 @@ package models
 
 // Trade struct represents a completed Transaction and its details
 type Trade struct {
-	TradeID          string  `json:"contract_id"`
+	TradeID          string  `json:"trade_id"`
 	SellerUserID     string  `json:"seller_user_id"`
 	SellerContractID string  `json:"seller_contract_id"`
 	BuyerUserID      string  `json:"buyer_user_id"`

@@ -2,83 +2,87 @@ package orderbook
 
 import (
 	"errors"
-	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
-	"github.com/emirpasic/gods/queues/priorityqueue"
+	"github.com/charmbracelet/log"
 	_ "github.com/joho/godotenv/autoload"
-	"log"
-	"os"
+	"strconv"
 	"sync"
 	"time"
 )
 
 // OrderBook stores order data and handles order processing.
 
-type LevelBook struct {
-	LevelID       string                      `json:"level_id"`      // LevelBook ID
-	Price         float32                     `json:"price"`         // Price at that LevelBook
-	Type          bool                        `json:"type"`          // Ask(true) or Bid(false) for setting up the comparator for the hashmap
-	NoOfContracts int64                       `json:"noOfContracts"` // If 0 then simply delete struct from parent hashmap
-	Orders        *priorityqueue.Queue        `json:"orders"`        // Meant to keep order of contracts based on TimeStamps
-	Contracts     map[string]*models.Contract `json:"contracts"`     // Keep track of contracts in order to get instant data
-	ToBeDeleted   map[string]*models.Contract `json:"toBeDeleted"`   // For tracking what needs to be deleted
-}
-
 type OrderBook struct {
-	AsksLevelByLevel      *priorityqueue.Queue        // To keep track of orders simply by price level and not on a per-order basis
-	BidsLevelByLevel      *priorityqueue.Queue        // Same except for Bids
-	LimitAsksLevelByLevel *priorityqueue.Queue        // To keep track of Limit Orders based ordered by Prices and further by time stamps so
-	LimitBidsLevelByLevel *priorityqueue.Queue        // Same except for Limit Order Bids
-	AsksOrderByOrder      map[float32]*LevelBook      // To be able to extract orders on a contract by contract basis
-	BidsOrderByOrder      map[float32]*LevelBook      // Same except for Bids
-	LimitAsksOrderByOrder map[float32]*LevelBook      // To be able to extract orders on a contract by contract basis
-	LimitBidsOrderByOrder map[float32]*LevelBook      // Same except for Limit Order Bids
-	IncomingContracts     chan models.Contract        // Channel to stream incoming orders
-	Orders                map[string]*models.Contract // A map to extract any existing order
-	ToBeDeletedLevels     map[string]*LevelBook       // A map to keep track of Levels to be deleted
-	LastMatchedPrices     []models.Trade              // Struct to keep track of last matched prices
-	Lock                  sync.Mutex                  // Mutex (Maybe removed if not required)
+	Asks              *models.OrderQueue          // OrderQueue for Asks
+	Bids              *models.OrderQueue          // OrderQueue for Bids
+	LimitAsks         *models.OrderQueue          // OrderQueue for LimitAsks
+	LimitBids         *models.OrderQueue          // OrderQueue for LimitBids
+	IncomingContracts chan models.Contract        // Channel to stream incoming orders
+	CompletedTrades   chan models.Trade           // Channel to stream incoming orders
+	Orders            map[string]*models.Contract // A map to extract any existing order
+	LastMatchedPrices []models.Trade              // Struct to keep track of last matched prices
+	Lock              sync.Mutex                  // Mutex (Maybe removed if not required)
+	ContractNo        int                         // reference number to create ContractIDs
 }
 
 // NewOrderBook creates a new empty order book.
 func NewOrderBook() *OrderBook {
 	ob := &OrderBook{
-		AsksLevelByLevel:      priorityqueue.NewWith(LevelByLevel),
-		BidsLevelByLevel:      priorityqueue.NewWith(LevelByLevel),
-		LimitAsksLevelByLevel: priorityqueue.NewWith(LevelByLevel),
-		LimitBidsLevelByLevel: priorityqueue.NewWith(LevelByLevel),
-		AsksOrderByOrder:      make(map[float32]*LevelBook),
-		BidsOrderByOrder:      make(map[float32]*LevelBook),
-		LimitAsksOrderByOrder: make(map[float32]*LevelBook),
-		LimitBidsOrderByOrder: make(map[float32]*LevelBook),
-		IncomingContracts:     make(chan models.Contract),
-		//ToBeDeletedOrders:   make(map[string]*models.Contract),
-		ToBeDeletedLevels: make(map[string]*LevelBook),
+		Asks:              models.NewOrderQueue(),
+		Bids:              models.NewOrderQueue(),
+		LimitAsks:         models.NewOrderQueue(),
+		LimitBids:         models.NewOrderQueue(),
+		IncomingContracts: make(chan models.Contract),
+		CompletedTrades:   make(chan models.Trade),
 		Orders:            make(map[string]*models.Contract),
 		LastMatchedPrices: make([]models.Trade, 0),
 		Lock:              sync.Mutex{},
+		ContractNo:        0,
 	}
-	ob.StartProcessing()
+	ob.StartProcessingOrders()
+	ob.StartProcessingTrades()
 	return ob
 }
 
-// StartProcessing tarts up a thread that continuously checks the channel for new contracts to process
-func (ob *OrderBook) StartProcessing() {
+// StartProcessingTrades tarts up a thread that continuously checks the channel for new contracts to process
+func (ob *OrderBook) StartProcessingTrades() {
 	go func() {
 		for contract := range ob.IncomingContracts {
-			contract.Timestamp = time.Now().UnixMilli()
-			log.Printf("Processing contract: %+v\n", contract)
+			contract.SetTimestamp(time.Now().UnixMilli())
+			log.Printf("Processing contract: %+v", contract)
 			switch contract.RequestType {
 			case "add":
-				if err := ob.AddContract(contract); err != nil {
-					log.Printf("Error adding contract: %v\n", err)
+				if err := ob.AddContract(&contract); err != nil {
+					log.Printf("Error adding contract: %v", err)
 				}
 			case "delete":
-				if err := ob.CancelContract(contract); err != nil {
-					log.Printf("Error deleting contract: %v\n", err)
+				if err := ob.CancelContract(&contract); err != nil {
+					log.Printf("Error deleting contract: %v", err)
 				}
 			default:
-				log.Printf("Unknown request type: %s\n", contract.RequestType)
+				log.Printf("Unknown request type: %s", contract.RequestType)
+			}
+		}
+	}()
+}
+
+// StartProcessingOrders tarts up a thread that continuously checks the channel for new contracts to process
+func (ob *OrderBook) StartProcessingOrders() {
+	go func() {
+		for contract := range ob.IncomingContracts {
+			contract.SetTimestamp(time.Now().UnixMilli())
+			log.Printf("Processing contract: %+v", contract)
+			switch contract.RequestType {
+			case "add":
+				if err := ob.AddContract(&contract); err != nil {
+					log.Printf("Error adding contract: %v", err)
+				}
+			case "delete":
+				if err := ob.CancelContract(&contract); err != nil {
+					log.Printf("Error deleting contract: %v", err)
+				}
+			default:
+				log.Printf("Unknown request type: %s", contract.RequestType)
 			}
 		}
 	}()
@@ -89,33 +93,53 @@ func (ob *OrderBook) PushContractIntoQueue(contract models.Contract) {
 }
 
 // AddContract adds a new contract (order) to the order book and attempts to match orders.
-func (ob *OrderBook) AddContract(contract models.Contract) error {
+func (ob *OrderBook) AddContract(contract *models.Contract) error {
 
-	//ob.mu.Lock()
-	//defer ob.mu.Unlock()
-	contract.ContractID = helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("CONTRACT_ID_LENGTH")))
+	//contract.ContractID = helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("CONTRACT_ID_LENGTH")))
+
+	newContractID := strconv.Itoa(ob.ContractNo)
+	contract.ContractID = newContractID
+	//log.Infof("New Contract ID: %s ", contract.GetContractID())
+	ob.ContractNo++
 	switch contract.OrderType {
 	case "sell":
-		ob.AddContractToAsks(contract)
+
+		err := ob.Asks.Push(contract)
+		if err != nil {
+			log.Printf("Error pushing contract into Asks: %v", err)
+		}
+		log.Printf("Pushed contract into Asks: %+v", contract)
 	case "buy":
-		ob.AddContractToBids(contract)
-	case "limit_buy":
-		ob.AddContractToLimitBids(contract)
+		err := ob.Bids.Push(contract)
+		if err != nil {
+			log.Printf("Error pushing contract into Bids: %v", err)
+		}
+		log.Printf("Pushed contract into Bids: %+v", contract)
 	case "limit_sell":
-		ob.AddContractToLimitAsks(contract)
+		err := ob.LimitAsks.Push(contract)
+		if err != nil {
+			log.Printf("Error pushing contract into LimitAsks: %v", err)
+		}
+		log.Printf("Pushed contract into LimitAsks: %+v", contract)
+	case "limit_buy":
+		err := ob.LimitBids.Push(contract)
+		if err != nil {
+			log.Printf("Error pushing contract into LimitBids: %v", err)
+		}
+		log.Printf("Pushed contract into LimitBids: %+v", contract)
 	default:
 		return errors.New("invalid order type")
 	}
 
 	// Store the user's orders
-	ob.Orders[contract.ContractID] = &contract
+	ob.Orders[contract.ContractID] = contract
 	// Attempt to match orders after adding a new one
 	ob.MatchOrders()
 	return nil
 }
 
 // CancelContract cancels a specific user's contract.
-func (ob *OrderBook) CancelContract(contract models.Contract) error {
+func (ob *OrderBook) CancelContract(contract *models.Contract) error {
 
 	// Data required to cancel a given contract
 	// Contract_ID
@@ -128,28 +152,28 @@ func (ob *OrderBook) CancelContract(contract models.Contract) error {
 	if ok && orderInSystem.UserID == contract.UserID {
 		switch contract.OrderType {
 		case "buy":
-			ob.DeleteContractFromAsks(contract)
+			ob.Asks.Delete(contract.GetContractID())
 		case "sell":
-			ob.DeleteContractFromBids(contract)
+			ob.Bids.Delete(contract.GetContractID())
 		case "limit_buy":
-			ob.DeleteContractFromLimitAsks(contract)
+			ob.LimitBids.Delete(contract.GetContractID())
 		case "limit_sell":
-			ob.DeleteContractFromLimitBids(contract)
+			ob.LimitAsks.Delete(contract.GetContractID())
 		default:
 			{
 				return errors.New("invalid order type")
 			}
 		}
-
 	} else if !ok {
-		log.Println("Order doesnt exist in the system")
+		log.Printf("Order doesnt exist in the system")
 		return errors.New("order doesnt exist in the system")
 	} else {
-		log.Println("Order doesnt belong to the user :", contract.UserID)
+		log.Printf("Order doesnt belong to the user :", contract.UserID)
 		return errors.New("order doesnt belong to the user")
 	}
 
 	// Try matching remaining elements on deletion
+	delete(ob.Orders, contract.GetContractID())
 	ob.MatchOrders()
 
 	return nil
@@ -157,51 +181,61 @@ func (ob *OrderBook) CancelContract(contract models.Contract) error {
 }
 
 // ModifyContract cancels a specific user's contract and then adds a new contract based on the updated modifications.
-func (ob *OrderBook) ModifyContract(contract models.Contract) {
-	ob.CancelContract(contract)
-	ob.AddContract(contract)
+func (ob *OrderBook) ModifyContract(contract *models.Contract) error {
+
+	switch contract.OrderType {
+	case "buy":
+		c, err := ob.Bids.Find(contract.ContractID)
+		if err != nil {
+			return err
+		}
+		c.SetPrice(contract.GetPrice())
+		c.SetQuantity(contract.GetQuantity())
+	case "sell":
+		c, err := ob.Asks.Find(contract.ContractID)
+		if err != nil {
+			return err
+		}
+		c.SetPrice(contract.GetPrice())
+		c.SetQuantity(contract.GetQuantity())
+	case "limit_buy":
+		c, err := ob.LimitBids.Find(contract.ContractID)
+		if err != nil {
+			return err
+		}
+		c.SetPrice(contract.GetPrice())
+		c.SetQuantity(contract.GetQuantity())
+	case "limit_sell":
+		c, err := ob.LimitAsks.Find(contract.ContractID)
+		if err != nil {
+			return err
+		}
+		c.SetPrice(contract.GetPrice())
+		c.SetQuantity(contract.GetQuantity())
+	default:
+		return errors.New("invalid order type")
+	}
+	ob.MatchOrders()
+	return nil
 }
 
 // MatchOrders matches the highest bid with the lowest ask.
 func (ob *OrderBook) MatchOrders() {
 
-	// First we need to delete all references of LevelBooks that are to be deleted in Asks as well
-	ob.FinalContractDeletion()
-	ob.FinalLevelDeletion()
-	ob.AddLimitOrdersToOrderBook()
-	// Now we move on to seeing if the top most bids will match or not
-	lal, doAsksExist := ob.AsksLevelByLevel.Peek()
-	hbl, doBidsExist := ob.BidsLevelByLevel.Peek()
-
-	if doAsksExist && doBidsExist {
-		lowestAskLevel := lal.(*LevelBook)
-		highestBidLevel := hbl.(*LevelBook)
-		if lowestAskLevel.Price <= highestBidLevel.Price {
-			ob.MergeTopPrices()
-		}
-	} else {
-		return
+	err1 := ob.AddLimitOrdersToOrderBook()
+	if err1 != nil {
+		log.Printf("Error adding limit orders to order book: %v", err1)
 	}
-
+	err2 := ob.MergeTopPrices()
+	if err2 != nil {
+		log.Printf("Error merging top prices: %v", err2)
+	}
 }
 
-// GetLastTrades gets the traded prices
-func (ob *OrderBook) GetLastTrades() *[]models.Trade {
-	return &ob.LastMatchedPrices
-}
-
-// GetTopOfOrderBook gets the top Ask and Bid Level Details
-func (ob *OrderBook) GetTopOfOrderBook() []LevelBook {
-	var topLevels []LevelBook
-	topAsk, taNotExists := ob.AsksLevelByLevel.Peek()
-	topBid, tbNotExists := ob.BidsLevelByLevel.Peek()
-	if taNotExists {
-		ta := *topAsk.(*LevelBook)
-		topLevels = append(topLevels, ta)
+// GetLastTrades gets the last n traded prices
+func (ob *OrderBook) GetLastTrades(n int) []models.Trade {
+	if n > len(ob.LastMatchedPrices) {
+		n = len(ob.LastMatchedPrices)
 	}
-	if tbNotExists {
-		tb := *topBid.(*LevelBook)
-		topLevels = append(topLevels, tb)
-	}
-	return topLevels
+	return ob.LastMatchedPrices[len(ob.LastMatchedPrices)-n:]
 }

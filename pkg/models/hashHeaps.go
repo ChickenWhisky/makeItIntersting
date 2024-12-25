@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/emirpasic/gods/queues/priorityqueue"
 	"github.com/emirpasic/gods/utils"
+	"log"
 )
 
 type OrderQueue struct {
@@ -18,25 +19,24 @@ type OrderQueue struct {
 
 // PriceTimeBased implements the basic FIFO match making
 func PriceTimeBased(a, b interface{}) int {
-	timeA := a.(*Contract).Timestamp
-	timeB := b.(*Contract).Timestamp
-	priceA := a.(*Contract).Price
-	priceB := b.(*Contract).Price
-	if priceA == priceB {
-		return utils.Int64Comparator(timeA, timeB)
+
+	A := a.(*Contract)
+	B := b.(*Contract)
+	if A.GetPrice() == B.GetPrice() {
+		return utils.Int64Comparator(A.GetTimestamp(), B.GetTimestamp())
 	} else {
-		if a.(*Contract).OrderType == "buy" || a.(*Contract).OrderType == "limit_buy" {
-			if priceA < priceB {
+		if A.GetOrderType() == "buy" || A.GetOrderType() == "limit_buy" {
+			if A.GetPrice() < B.GetPrice() {
 				return -1
 			}
-			if priceA > priceB {
+			if A.GetPrice() > B.GetPrice() {
 				return 1
 			}
 		} else {
-			if priceA > priceB {
+			if A.GetPrice() > B.GetPrice() {
 				return -1
 			}
-			if priceA < priceB {
+			if A.GetPrice() < B.GetPrice() {
 				return 1
 			}
 
@@ -55,7 +55,7 @@ func NewOrderQueue() *OrderQueue {
 	}
 }
 
-// Pop returns the contract fromt the top of the OrderQueue as well as dequeues it from the OrderQueue
+// Pop returns the contract from the top of the OrderQueue as well as dequeues it from the OrderQueue
 func (oq OrderQueue) Pop() (*Contract, error) {
 	_contract, isPQNotEmpty := oq.heap.Peek()
 	if !isPQNotEmpty {
@@ -65,24 +65,38 @@ func (oq OrderQueue) Pop() (*Contract, error) {
 	oq.heap.Dequeue()
 
 	// If the item in contention is to be deleted then simply ignore it and call oq.Pop() again
-	if oq.toBeDeleted[contract.ContractID] != nil {
-		delete(oq.toBeDeleted, contract.ContractID)
+	if oq.toBeDeleted[contract.GetContractID()] != nil {
+		delete(oq.toBeDeleted, contract.GetContractID())
 		return oq.Pop()
 	}
 
 	// Remove th order from the mapping of contract ID's to Contract pointers as well as reduce the number of orders
-	delete(oq.orders, contract.ContractID)
+	delete(oq.orders, contract.GetContractID())
 	oq.noOfOrders--
 
 	return contract, nil
 }
 
+// Empty checks whether the HashHeap is empty or not
+func (oq OrderQueue) Empty() bool {
+	return oq.noOfOrders == 0
+}
+
+func (oq OrderQueue) TopPrice() float32 {
+	_contract, err := oq.Top()
+	if err != nil {
+		log.Printf("Error: %v", err)
+		return -1 // Sending -1 as negative pricing doesn't make sense
+	}
+	return _contract.GetPrice()
+}
+
 // Push enqueues a contract into the OrderQueue
 func (oq OrderQueue) Push(contract *Contract) error {
-	if oq.orders[contract.ContractID] != nil {
+	if oq.orders[contract.GetContractID()] != nil {
 		return errors.New("contract already exists")
 	}
-	oq.orders[contract.ContractID] = contract
+	oq.orders[contract.GetContractID()] = contract
 	oq.noOfOrders++
 	oq.heap.Enqueue(contract)
 	return nil
@@ -98,7 +112,7 @@ func (oq OrderQueue) Top() (*Contract, error) {
 	contract := _contract.(*Contract)
 
 	// Checks if the contract needs to be deleted or not
-	if oq.toBeDeleted[contract.ContractID] != nil {
+	if oq.toBeDeleted[contract.GetContractID()] != nil {
 		oq.Pop()
 		return oq.Top()
 	}
@@ -115,13 +129,13 @@ func (oq OrderQueue) Delete(ID string) error {
 	if contract == nil {
 		return fmt.Errorf("contract %s does not exist", ID)
 	}
-	if oq.toBeDeleted[contract.ContractID] != nil {
+	if oq.toBeDeleted[contract.GetContractID()] != nil {
 		return fmt.Errorf("contract %s already deleted", ID)
 	}
 
 	delete(oq.orders, ID)
 	oq.noOfOrders--
-	oq.toBeDeleted[ID] = contract
+	oq.toBeDeleted[contract.GetContractID()] = contract
 	return nil
 }
 
@@ -136,8 +150,8 @@ func (oq OrderQueue) Find(ID string) (*Contract, error) {
 // clear is a function that simply checks if the contract in contention is to be deleted if the clearing is done the bool
 // will be returned as true else it will be returned as false
 func (oq OrderQueue) clear(contract *Contract) bool {
-	if oq.toBeDeleted[contract.ContractID] != nil {
-		delete(oq.toBeDeleted, contract.ContractID)
+	if oq.toBeDeleted[contract.GetContractID()] != nil {
+		delete(oq.toBeDeleted, contract.GetContractID())
 		return true
 	}
 	return false

@@ -12,31 +12,33 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() error {
 	//lowestAsk, err1 := ob.Asks.Top()
 	log.Print("Starting Function: AddLimitOrdersToOrderBook")
 	lowestAsk, _ := ob.Asks.Top()
+	if lowestAsk != nil {
+		if ob.LimitAsks.TopPrice() != -1 {
+			for ob.LimitAsks.TopPrice() <= lowestAsk.GetPrice() {
+				topLimitAsks, err := ob.LimitAsks.Pop()
+				if err != nil {
 
-	if ob.LimitAsks.TopPrice() != -1 {
-		for ob.LimitAsks.TopPrice() <= lowestAsk.GetPrice() {
-			topLimitAsks, err := ob.LimitAsks.Pop()
-			if err != nil {
-
-				return errors.New("Error popping limit asks")
+					return errors.New("Error popping limit asks")
+				}
+				topLimitAsks.SetOrderType("sell")
+				topLimitAsks.SetTimestamp(time.Now().UnixMilli())
+				ob.AddContract(topLimitAsks)
 			}
-			topLimitAsks.SetOrderType("sell")
-			topLimitAsks.SetTimestamp(time.Now().UnixMilli())
-			ob.AddContract(topLimitAsks)
 		}
 	}
 	highestBid, _ := ob.Bids.Top()
 	//highestBid, err2 := ob.Bids.Top()
-
-	if ob.LimitBids.TopPrice() != -1 {
-		for ob.LimitBids.TopPrice() >= highestBid.GetPrice() {
-			topLimitBids, err := ob.LimitBids.Pop()
-			if err != nil {
-				return errors.New("Error popping limit bids")
+	if highestBid != nil {
+		if ob.LimitBids.TopPrice() != -1 {
+			for ob.LimitBids.TopPrice() >= highestBid.GetPrice() {
+				topLimitBids, err := ob.LimitBids.Pop()
+				if err != nil {
+					return errors.New("Error popping limit bids")
+				}
+				topLimitBids.SetOrderType("buy")
+				topLimitBids.SetTimestamp(time.Now().UnixMilli())
+				ob.AddContract(topLimitBids)
 			}
-			topLimitBids.SetOrderType("buy")
-			topLimitBids.SetTimestamp(time.Now().UnixMilli())
-			ob.AddContract(topLimitBids)
 		}
 	}
 	log.Print("Ending Function: AddLimitOrdersToOrderBook")
@@ -75,13 +77,13 @@ func (ob *OrderBook) MergeTopPrices() error {
 		} else if _lowestAsk.GetQuantity() < _highestBid.GetQuantity() {
 			lowestAsk, _ := ob.Asks.Pop()
 			highestBid, _ := ob.Bids.Top()
-			NoOfcontracts = highestBid.GetQuantity() - lowestAsk.GetQuantity()
+			NoOfcontracts = lowestAsk.GetQuantity()
 			highestBid.SetQuantity(highestBid.GetQuantity() - lowestAsk.GetQuantity())
 			ob.LogHandler(lowestAsk, highestBid)
 		} else {
 			lowestAsk, _ := ob.Asks.Top()
 			highestBid, _ := ob.Bids.Pop()
-			NoOfcontracts = lowestAsk.GetQuantity() - highestBid.GetQuantity()
+			NoOfcontracts = highestBid.GetQuantity()
 			lowestAsk.SetQuantity(lowestAsk.GetQuantity() - highestBid.GetQuantity())
 			ob.LogHandler(lowestAsk, highestBid)
 		}

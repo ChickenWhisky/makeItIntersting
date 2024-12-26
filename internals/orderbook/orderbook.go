@@ -40,7 +40,7 @@ func NewOrderBook() *OrderBook {
 		ContractNo:        0,
 	}
 	ob.StartProcessingOrders()
-	ob.StartProcessingTrades()
+	//ob.StartProcessingTrades()
 	return ob
 }
 
@@ -80,6 +80,10 @@ func (ob *OrderBook) StartProcessingOrders() {
 			case "delete":
 				if err := ob.CancelContract(&contract); err != nil {
 					log.Printf("Error deleting contract: %v", err)
+				}
+			case "modify":
+				if err := ob.ModifyContract(&contract); err != nil {
+					log.Printf("Error modifying contract: %v", err)
 				}
 			default:
 				log.Printf("Unknown request type: %s", contract.RequestType)
@@ -149,16 +153,37 @@ func (ob *OrderBook) CancelContract(contract *models.Contract) error {
 
 	// First check if Order Exists
 	orderInSystem, ok := ob.Orders[contract.ContractID]
-	if ok && orderInSystem.UserID == contract.UserID {
+	if ok && orderInSystem.UserID == contract.GetUserID() {
+		log.Infof("Order found in the system : %v", contract.GetContractID())
 		switch contract.OrderType {
 		case "buy":
 			ob.Asks.Delete(contract.GetContractID())
+			_, err := ob.Asks.Find(contract.GetContractID())
+			if err == nil {
+				log.Printf("CONTRACT DELETION ERROR : %v", err)
+			}
+			log.Printf("CONTRACT DELETION SUCCESS")
 		case "sell":
 			ob.Bids.Delete(contract.GetContractID())
+			_, err := ob.Bids.Find(contract.GetContractID())
+			if err == nil {
+				log.Printf("CONTRACT DELETION ERROR : %v", err)
+			}
+			log.Printf("CONTRACT DELETION SUCCESS")
 		case "limit_buy":
 			ob.LimitBids.Delete(contract.GetContractID())
+			_, err := ob.LimitBids.Find(contract.GetContractID())
+			if err == nil {
+				log.Printf("CONTRACT DELETION ERROR : %v", err)
+			}
+			log.Printf("CONTRACT DELETION SUCCESS")
 		case "limit_sell":
 			ob.LimitAsks.Delete(contract.GetContractID())
+			_, err := ob.LimitAsks.Find(contract.GetContractID())
+			if err == nil {
+				log.Printf("CONTRACT DELETION ERROR : %v", err)
+			}
+			log.Printf("CONTRACT DELETION SUCCESS")
 		default:
 			{
 				return errors.New("invalid order type")

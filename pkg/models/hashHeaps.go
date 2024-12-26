@@ -55,28 +55,6 @@ func NewOrderQueue() *OrderQueue {
 	}
 }
 
-// Pop returns the contract from the top of the OrderQueue as well as dequeues it from the OrderQueue
-func (oq *OrderQueue) Pop() (*Contract, error) {
-	_contract, isPQNotEmpty := oq.heap.Peek()
-	if !isPQNotEmpty {
-		return nil, errors.New("order queue is empty")
-	}
-	contract := _contract.(*Contract)
-	oq.heap.Dequeue()
-
-	// If the item in contention is to be deleted then simply ignore it and call oq.Pop() again
-	if oq.toBeDeleted[contract.GetContractID()] != nil {
-		delete(oq.toBeDeleted, contract.GetContractID())
-		return oq.Pop()
-	}
-
-	// Remove th order from the mapping of contract ID's to Contract pointers as well as reduce the number of orders
-	delete(oq.orders, contract.GetContractID())
-	oq.noOfOrders--
-
-	return contract, nil
-}
-
 // Empty checks whether the HashHeap is empty or not
 func (oq *OrderQueue) Empty() bool {
 	return oq.noOfOrders == 0
@@ -102,6 +80,28 @@ func (oq *OrderQueue) Push(contract *Contract) error {
 	return nil
 }
 
+// Pop returns the contract from the top of the OrderQueue as well as dequeues it from the OrderQueue
+func (oq *OrderQueue) Pop() (*Contract, error) {
+	_contract, isPQNotEmpty := oq.heap.Dequeue()
+	if !isPQNotEmpty {
+		return nil, errors.New("order queue is empty")
+	}
+	contract := _contract.(*Contract)
+
+	// If the item in contention is to be deleted then simply ignore it and call oq.Pop() again
+	if oq.toBeDeleted[contract.GetContractID()] == contract {
+		delete(oq.toBeDeleted, contract.GetContractID())
+		return oq.Pop()
+	}
+
+	// Remove th order from the mapping of contract ID's to Contract pointers as well as reduce the number of orders
+
+	delete(oq.orders, contract.GetContractID())
+	oq.noOfOrders--
+
+	return contract, nil
+}
+
 // Top returns the contract at the top of the OrderQueue
 func (oq *OrderQueue) Top() (*Contract, error) {
 	_contract, isPQNotEmpty := oq.heap.Peek()
@@ -112,7 +112,7 @@ func (oq *OrderQueue) Top() (*Contract, error) {
 	contract := _contract.(*Contract)
 
 	// Checks if the contract needs to be deleted or not
-	if oq.toBeDeleted[contract.GetContractID()] != nil {
+	if oq.toBeDeleted[contract.GetContractID()] == contract {
 		oq.Pop()
 		return oq.Top()
 	}
@@ -129,12 +129,13 @@ func (oq *OrderQueue) Delete(ID string) error {
 	if contract == nil {
 		return fmt.Errorf("contract %s does not exist", ID)
 	}
-	if oq.toBeDeleted[contract.GetContractID()] != nil {
+	if oq.toBeDeleted[contract.GetContractID()] == contract {
 		return fmt.Errorf("contract %s already deleted", ID)
 	}
-
+	log.Printf("Contract %s is to be deleted FROM ORDERS TRACKER", ID)
 	delete(oq.orders, ID)
 	oq.noOfOrders--
+	log.Printf("Contract %s is to added TO BE DELETED TRACKER", ID)
 	oq.toBeDeleted[contract.GetContractID()] = contract
 	return nil
 }
@@ -150,7 +151,7 @@ func (oq *OrderQueue) Find(ID string) (*Contract, error) {
 // clear is a function that simply checks if the contract in contention is to be deleted if the clearing is done the bool
 // will be returned as true else it will be returned as false
 func (oq *OrderQueue) clear(contract *Contract) bool {
-	if oq.toBeDeleted[contract.GetContractID()] != nil {
+	if oq.toBeDeleted[contract.GetContractID()] == contract {
 		delete(oq.toBeDeleted, contract.GetContractID())
 		return true
 	}

@@ -2,7 +2,7 @@ import requests
 import matplotlib.pyplot as plt
 
 # API URL
-API_URL = "http://localhost:8080/orderbook"
+API_URL = "http://localhost:8080/tr"
 
 def fetch_order_book():
     response = requests.get(API_URL)

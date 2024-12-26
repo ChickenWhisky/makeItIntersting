@@ -23,6 +23,9 @@
 
     WORKDIR /app
     COPY --from=builder /app/bin/myapp /app/myapp
+    COPY --from=builder /app/.env /app/myapp
+    RUN chmod +x /app/myapp
+
     EXPOSE 8000
     ENTRYPOINT ["/app/myapp"]
     

@@ -1,11 +1,11 @@
 testing/trading_simulation.log
 trading_simulation.log
-.env
+./.env
 docker-compose.yml
 .idea
-main
+./main
 .air.toml
 tmp
-trades.txt
+./trades.txt
 .gitignore
 makeItIntersting

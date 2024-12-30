@@ -3,7 +3,7 @@ trading_simulation.log
 ./.env
 docker-compose.yml
 .idea
-./main
+main
 .air.toml
 tmp
 trades.txt

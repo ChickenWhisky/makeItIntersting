@@ -30,6 +30,8 @@ func main() {
 	}
 
 	// Get host and port from environment variables
+	web_url := os.Getenv("WEB_URL")
+
 	host := os.Getenv("HOST")
 	port := os.Getenv("PORT")
 	address := host + ":" + port
@@ -37,32 +39,27 @@ func main() {
 	// Initialize the Gin router
 	router := gin.Default()
 
-	// Set up routes from handlers package
-
-	// use ginSwagger middleware to serve the API docs
-
 	router.OPTIONS("/*path", func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "http://localhost:3000")
+		c.Header("Access-Control-Allow-Origin", web_url)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Status(204)
 	})
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // Explicitly allow your frontend
+		AllowOrigins:     []string{web_url}, // Explicitly allow your frontend
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://localhost:3000"
+			return origin == web_url
 		},
 		MaxAge: 12 * time.Hour,
 	}))
 
 	handlers.SetupRoutes(router)
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	// Run the server
 	router.Run(address)
 }

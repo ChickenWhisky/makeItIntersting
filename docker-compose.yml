@@ -1,6 +1,10 @@
 services:
   myapp:
-    build: .
+    build:
+        context: .
+        dockerfile: Dockerfile
     ports:
-      - "8000:8000"  # Map host port 5000 to container port 8080
-    container_name: myapp-container
+      - "8000:8000"  # Map host port 8000 to container port 8080
+    container_name: matching-engine
+    env_file:
+      - ./.env

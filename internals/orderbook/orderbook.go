@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 	"github.com/charmbracelet/log"
-	_ "github.com/joho/godotenv/autoload"
 	"strconv"
 	"sync"
 	"time"
@@ -23,6 +22,7 @@ type OrderBook struct {
 	LastMatchedPrices []models.Trade              // Struct to keep track of last matched prices
 	Lock              sync.Mutex                  // Mutex (Maybe removed if not required)
 	ContractNo        int                         // reference number to create ContractIDs
+	TradeNo           int                         // reference number to create TradeIDs
 }
 
 // NewOrderBook creates a new empty order book.
@@ -38,6 +38,7 @@ func NewOrderBook() *OrderBook {
 		LastMatchedPrices: make([]models.Trade, 0),
 		Lock:              sync.Mutex{},
 		ContractNo:        0,
+		TradeNo:           0,
 	}
 	ob.StartProcessingOrders()
 	//ob.StartProcessingTrades()
@@ -103,7 +104,6 @@ func (ob *OrderBook) AddContract(contract *models.Contract) error {
 
 	newContractID := strconv.Itoa(ob.ContractNo)
 	contract.ContractID = newContractID
-	//log.Infof("New Contract ID: %s ", contract.GetContractID())
 	ob.ContractNo++
 	switch contract.OrderType {
 	case "sell":
@@ -193,7 +193,7 @@ func (ob *OrderBook) CancelContract(contract *models.Contract) error {
 		log.Printf("Order doesnt exist in the system")
 		return errors.New("order doesnt exist in the system")
 	} else {
-		log.Printf("Order doesnt belong to the user :", contract.UserID)
+		log.Printf("Order doesnt belong to the user : %v", contract.UserID)
 		return errors.New("order doesnt belong to the user")
 	}
 
@@ -259,6 +259,9 @@ func (ob *OrderBook) MatchOrders() {
 
 // GetLastTrades gets the last n traded prices
 func (ob *OrderBook) GetLastTrades(n int) []models.Trade {
+	if n == -1 {
+		return ob.LastMatchedPrices
+	}
 	if n > len(ob.LastMatchedPrices) {
 		n = len(ob.LastMatchedPrices)
 	}

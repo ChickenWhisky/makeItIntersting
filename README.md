@@ -2,27 +2,32 @@
 
 To start the server either build the executable and run the executable
 
-##### Build executable
+## Build executable
+
 ```bash
 go build main.go
 ./main.go
 ```
 
 or we could simply run the following code
+
 ```bash
 go run main.go
 ```
+
 The service will then be available at `localhost:8000`
 To change the above simply change the variable PORT from the .env file
 
-
 # Endpoints
-#### Create Order
+
+## Create Order
+
 Creates a new order in the order book.
 **Endpoint:** `POST /order`  
 **Content-Type:** `application/json`
 
 **Request Body:**
+
 ```json
 {
     "contract_id" : int64     // Unique Contract ID in the trading system  
@@ -34,6 +39,7 @@ Creates a new order in the order book.
 ```
 
 **Response:**
+
 ```json
 {
     "contract_id": "string",
@@ -46,17 +52,20 @@ Creates a new order in the order book.
 ```
 
 **Status Codes:**
+
 - 200: Success
 - 400: Invalid request
 - 500: Server error
 
 ### Modify Order
+
 Modifies an existing order in the order book if it hasnt been executed yet.
 
 **Endpoint:** `PUT /order`  
 **Content-Type:** `application/json`
 **Notes :** User cannot change **Order Type**. Any attempt to add order type to request body is ignored
 **Request Body:**
+
 ```json
 {
     "contract_id": "string",  // Unique Contract ID in the trading system  
@@ -67,6 +76,7 @@ Modifies an existing order in the order book if it hasnt been executed yet.
 ```
 
 **Response:**
+
 ```json
 {
     "contract_id": "string",
@@ -79,18 +89,21 @@ Modifies an existing order in the order book if it hasnt been executed yet.
 ```
 
 **Status Codes:**
+
 - 200: Success
 - 400: Invalid request
 - 404: Order not found
 - 500: Server error
 
 ### Cancel Order
+
 Cancels an existing order in the order book if it hasnt been executed yet.
 
 **Endpoint:** `DELETE /order`  
 **Content-Type:** `application/json`
 
 **Request Body:**
+
 ```json
 {
     "contract_id": "string",
@@ -99,6 +112,7 @@ Cancels an existing order in the order book if it hasnt been executed yet.
 ```
 
 **Response:**
+
 ```json
 {
     "message": "Order successfully cancelled"
@@ -106,20 +120,24 @@ Cancels an existing order in the order book if it hasnt been executed yet.
 ```
 
 **Status Codes:**
+
 - 200: Success
 - 400: Invalid request
 - 404: Order not found
 - 500: Server error
 
 ### Get Last Trades
+
 Retrieves the last N completed trades.
 
 **Endpoint:** `GET /trades/:noOfContracts`
 
 **Parameters:**
+
 - `noOfContracts`: Number of recent trades to retrieve (integer)
 
 **Response:**
+
 ```json
 {
     "trades": [
@@ -135,19 +153,17 @@ Retrieves the last N completed trades.
 ```
 
 **Status Codes:**
+
 - 200: Success
 - 400: Invalid request
 - 500: Server error
-
 
 ## Implementation
 
 The implementation will be divided into stages focusing on key components, starting with backend services, followed by frontend integration, and finally, the admin portal.
 
-
-
-
 ### Database Schema (Summary)
+
 Here’s a summary of the key database tables involved in the implementation:
 
 1. **Users**:
@@ -204,9 +220,11 @@ Here’s a summary of the key database tables involved in the implementation:
 # Order Book API Documentation
 
 ## Overview
+
 This API provides endpoints to interact with an order matching engine. Users can create, modify, and cancel orders, as well as retrieve trade history. The system includes self-trade prevention mechanisms to prevent users from accidentally trading with themselves.
 
 ## Self-Trade Prevention
+
 The system implements self-trade prevention to stop users from accidentally trading with themselves. The following modes are available:
 
 - `cancel_newest`: Rejects the incoming order if it would match with an existing order from the same user
@@ -214,7 +232,9 @@ The system implements self-trade prevention to stop users from accidentally trad
 - `cancel_both`: Cancels both existing and new orders
 
 ## Error Responses
+
 All error responses follow this format:
+
 ```json
 {
     "error": "Error message describing what went wrong"
@@ -222,11 +242,13 @@ All error responses follow this format:
 ```
 
 ## Rate Limiting
+
 Please note that API rate limits may apply. Contact the system administrator for specific limits.
 
 ## Example Usage
 
 ### Creating a Limit Buy Order
+
 ```bash
 curl -X POST http://localhost:8080/order \
   -H "Content-Type: application/json" \
@@ -240,6 +262,7 @@ curl -X POST http://localhost:8080/order \
 ```
 
 ### Cancelling an Order
+
 ```bash
 curl -X DELETE http://localhost:8080/order \
   -H "Content-Type: application/json" \
@@ -251,6 +274,7 @@ curl -X DELETE http://localhost:8080/order \
 ```
 
 ### Getting Last 5 Trades
+
 ```bash
 curl http://localhost:8080/trades/5
 ```

@@ -1,12 +1,15 @@
 package main
 
 import (
+	"log"
+	"os"
+
 	"github.com/ChickenWhisky/makeItIntersting/docs"
 	"github.com/ChickenWhisky/makeItIntersting/internals/handlers"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
-	"os"
 )
 
 func main() {
@@ -18,6 +21,12 @@ func main() {
 	docs.SwaggerInfo.Host = "petstore.swagger.io"
 	docs.SwaggerInfo.BasePath = "/v2"
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
 
 	// Get host and port from environment variables
 	web_url := os.Getenv("WEB_URL")

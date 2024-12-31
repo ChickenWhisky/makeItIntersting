@@ -1,3 +1,7 @@
+# Overview
+
+This API provides endpoints to interact with an order matching engine. Users can create, modify, and cancel orders, as well as retrieve trade history. The system includes self-trade prevention mechanisms to prevent users from accidentally trading with themselves.
+
 # Setup
 
 To start the server either build the executable and run the executable
@@ -212,16 +216,12 @@ Here’s a summary of the key database tables involved in the implementation:
 ### Key Features Implemented
 
 - [ ] **User Management**: Registration, login, balance, and simulated fund transfers.
-- [ ] **Order Book**: Users can place and cancel orders for contracts.
-- [ ] **Real-Time Matching Engine**: Handles partial and full matching of contracts.
+- [X] **Order Book**: Users can place and cancel orders for contracts.
+- [X] **Real-Time Matching Engine**: Handles partial and full matching of contracts.
 - [ ] **Price History Tracking**: Logs matched prices for each event and exposes this data via REST APIs.
 - [ ] **Event Management**: Admins create events and resolve outcomes, with user balances updated accordingly.
 
 # Order Book API Documentation
-
-## Overview
-
-This API provides endpoints to interact with an order matching engine. Users can create, modify, and cancel orders, as well as retrieve trade history. The system includes self-trade prevention mechanisms to prevent users from accidentally trading with themselves.
 
 ## Self-Trade Prevention
 
@@ -230,51 +230,3 @@ The system implements self-trade prevention to stop users from accidentally trad
 - `cancel_newest`: Rejects the incoming order if it would match with an existing order from the same user
 - `cancel_oldest`: Cancels existing orders and adds the new one
 - `cancel_both`: Cancels both existing and new orders
-
-## Error Responses
-
-All error responses follow this format:
-
-```json
-{
-    "error": "Error message describing what went wrong"
-}
-```
-
-## Rate Limiting
-
-Please note that API rate limits may apply. Contact the system administrator for specific limits.
-
-## Example Usage
-
-### Creating a Limit Buy Order
-
-```bash
-curl -X POST http://localhost:8080/order \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "0",
-    "order_type": "buy",
-    "price": 100,
-    "quantity": 10,
-    "request_type": "add"
-  }'
-```
-
-### Cancelling an Order
-
-```bash
-curl -X DELETE http://localhost:8080/order \
-  -H "Content-Type: application/json" \
-  -d '{
-    "contract_id": "abc123",
-    "user_id": "user123",
-    "request_type": "delete"
-  }'
-```
-
-### Getting Last 5 Trades
-
-```bash
-curl http://localhost:8080/trades/5
-```

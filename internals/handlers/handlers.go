@@ -51,7 +51,8 @@ func CreateOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	contract.Timestamp = time.Now().UnixMilli()
+	contract.SetRequestType("add")
+	contract.SetTimestamp(time.Now().UnixMilli()) 
 	ob.PushContractIntoQueue(contract)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "contract": contract})
@@ -64,6 +65,7 @@ func CancelOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	contractForCancellation.SetRequestType("delete")
 	ob.PushContractIntoQueue(contractForCancellation)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
@@ -77,6 +79,7 @@ func ModifyOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	contractForModification.SetRequestType("modify")
 	ob.PushContractIntoQueue(contractForModification)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})

@@ -4,6 +4,7 @@ import (
 	"github.com/ChickenWhisky/makeItIntersting/internals/orderbook"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
+	"github.com/gin-contrib/cors"
 	"net/http"
 	"time"
 

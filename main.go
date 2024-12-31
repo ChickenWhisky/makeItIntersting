@@ -19,12 +19,6 @@ func main() {
 	docs.SwaggerInfo.BasePath = "/v2"
 	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
-	// Load .env file
-	//err := godotenv.Load()
-	//if err != nil {
-	//	log.Fatalf("Error loading .env file")
-	//}
-
 	// Get host and port from environment variables
 	web_url := os.Getenv("WEB_URL")
 

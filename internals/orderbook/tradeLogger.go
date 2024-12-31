@@ -2,17 +2,17 @@ package orderbook
 
 import (
 	"encoding/json"
-	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 	"github.com/charmbracelet/log"
 	"os"
+	"strconv"
 	"time"
 )
 
 func (ob *OrderBook) LogHandler(lowestAskContract *models.Contract, highestBidContract *models.Contract) {
 	// Log the trade
 	trade := models.Trade{
-		TradeID:          helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("TRADE_ID_LENGTH"))),
+		TradeID:          strconv.Itoa(ob.TradeNo),
 		SellerUserID:     lowestAskContract.UserID,
 		SellerContractID: lowestAskContract.ContractID,
 		BuyerUserID:      highestBidContract.UserID,
@@ -21,6 +21,7 @@ func (ob *OrderBook) LogHandler(lowestAskContract *models.Contract, highestBidCo
 		Quantity:         min(lowestAskContract.Quantity, highestBidContract.Quantity),
 		Timestamp:        time.Now().UnixMilli(),
 	}
+	ob.TradeNo++
 	ob.LastMatchedPrices = append(ob.LastMatchedPrices, trade)
 	file, err := os.OpenFile("trades.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

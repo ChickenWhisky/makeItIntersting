@@ -148,7 +148,188 @@ Here’s a summary of the key database tables involved in the implementation:
 - [ ] **Price History Tracking**: Logs matched prices for each event and exposes this data via REST APIs.
 - [ ] **Event Management**: Admins create events and resolve outcomes, with user balances updated accordingly.
 
+# Order Book API Documentation
 
+## Overview
+This API provides endpoints to interact with an order matching engine. Users can create, modify, and cancel orders, as well as retrieve trade history. The system includes self-trade prevention mechanisms to prevent users from accidentally trading with themselves.
 
+## Base URL
+```
+http://localhost:8080
+```
 
+## Endpoints
 
+### Create Order
+Creates a new order in the order book.
+
+**Endpoint:** `POST /order`  
+**Content-Type:** `application/json`
+
+**Request Body:**
+```json
+{
+    "user_id": "string",
+    "order_type": "string",    // "buy", "sell", "limit_buy", "limit_sell"
+    "price": float,           // required for limit orders
+    "quantity": float,
+    "request_type": "add"
+}
+```
+
+**Response:**
+```json
+{
+    "contract_id": "string",
+    "user_id": "string",
+    "order_type": "string",
+    "price": float,
+    "quantity": float,
+    "timestamp": int64
+}
+```
+
+**Status Codes:**
+- 200: Success
+- 400: Invalid request
+- 500: Server error
+
+### Modify Order
+Modifies an existing order in the order book.
+
+**Endpoint:** `PUT /order`  
+**Content-Type:** `application/json`
+
+**Request Body:**
+```json
+{
+    "contract_id": "string",
+    "user_id": "string",
+    "price": float,           // new price
+    "quantity": float,        // new quantity
+    "request_type": "modify"
+}
+```
+
+**Response:**
+```json
+{
+    "contract_id": "string",
+    "user_id": "string",
+    "order_type": "string",
+    "price": float,
+    "quantity": float,
+    "timestamp": int64
+}
+```
+
+**Status Codes:**
+- 200: Success
+- 400: Invalid request
+- 404: Order not found
+- 500: Server error
+
+### Cancel Order
+Cancels an existing order in the order book.
+
+**Endpoint:** `DELETE /order`  
+**Content-Type:** `application/json`
+
+**Request Body:**
+```json
+{
+    "contract_id": "string",
+    "user_id": "string",
+    "request_type": "delete"
+}
+```
+
+**Response:**
+```json
+{
+    "message": "Order successfully cancelled"
+}
+```
+
+**Status Codes:**
+- 200: Success
+- 400: Invalid request
+- 404: Order not found
+- 500: Server error
+
+### Get Last Trades
+Retrieves the last N completed trades.
+
+**Endpoint:** `GET /trades/:noOfContracts`
+
+**Parameters:**
+- `noOfContracts`: Number of recent trades to retrieve (integer)
+
+**Response:**
+```json
+{
+    "trades": [
+        {
+            "price": float,
+            "quantity": float,
+            "timestamp": int64,
+            "buyer_id": "string",
+            "seller_id": "string"
+        }
+    ]
+}
+```
+
+**Status Codes:**
+- 200: Success
+- 400: Invalid request
+- 500: Server error
+
+## Self-Trade Prevention
+The system implements self-trade prevention to stop users from accidentally trading with themselves. The following modes are available:
+
+- `cancel_newest`: Rejects the incoming order if it would match with an existing order from the same user
+- `cancel_oldest`: Cancels existing orders and adds the new one
+- `cancel_both`: Cancels both existing and new orders
+
+## Error Responses
+All error responses follow this format:
+```json
+{
+    "error": "Error message describing what went wrong"
+}
+```
+
+## Rate Limiting
+Please note that API rate limits may apply. Contact the system administrator for specific limits.
+
+## Example Usage
+
+### Creating a Limit Buy Order
+```bash
+curl -X POST http://localhost:8080/order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "0",
+    "order_type": "buy",
+    "price": 100,
+    "quantity": 10,
+    "request_type": "add"
+  }'
+```
+
+### Cancelling an Order
+```bash
+curl -X DELETE http://localhost:8080/order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contract_id": "abc123",
+    "user_id": "user123",
+    "request_type": "delete"
+  }'
+```
+
+### Getting Last 5 Trades
+```bash
+curl http://localhost:8080/trades/5
+```

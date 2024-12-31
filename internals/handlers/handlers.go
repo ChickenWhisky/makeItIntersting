@@ -4,6 +4,7 @@ import (
 	"github.com/ChickenWhisky/makeItIntersting/internals/orderbook"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
+	"github.com/gin-contrib/cors"
 	"net/http"
 	"time"
 
@@ -14,6 +15,27 @@ import (
 var ob = orderbook.NewOrderBook()
 
 // SetupRoutes configures the routes for the Gin router
+func SetUpCors(router *gin.Engine, web_url string) {
+	router.OPTIONS("/*path", func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", web_url)
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Status(204)
+	})
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{web_url}, // Explicitly allow your frontend
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+
+		AllowOriginFunc: func(origin string) bool {
+			return origin == web_url
+		},
+		MaxAge: 12 * time.Hour,
+	}))
+}
 func SetupRoutes(router *gin.Engine) {
 	router.POST("/order", CreateOrder)
 	router.PUT("/order", ModifyOrder)

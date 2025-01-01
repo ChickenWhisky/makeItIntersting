@@ -40,33 +40,33 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/order", CreateOrder)
 	router.PUT("/order", ModifyOrder)
 	router.DELETE("/order", CancelOrder)
-	router.GET("/trades/:noOfContracts", GetLastTrades)
+	router.GET("/trades/:noOfOrders", GetLastTrades)
 	//router.GET("/top/", GetTopOfOrderBook)
 }
 
 // CreateOrder handles creating a new order
 func CreateOrder(c *gin.Context) {
-	var contract models.Contract
-	if err := c.BindJSON(&contract); err != nil {
+	var Order models.Order
+	if err := c.BindJSON(&Order); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	contract.SetRequestType("add")
-	contract.SetTimestamp(time.Now().UnixMilli()) 
-	ob.PushContractIntoQueue(contract)
+	Order.SetRequestType("add")
+	Order.SetTimestamp(time.Now().UnixMilli()) 
+	ob.PushOrderIntoQueue(Order)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "contract": contract})
+	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "Order": Order})
 }
 
 // CancelOrder handles canceling an existing order
 func CancelOrder(c *gin.Context) {
-	var contractForCancellation models.Contract
-	if err := c.BindJSON(&contractForCancellation); err != nil {
+	var OrderForCancellation models.Order
+	if err := c.BindJSON(&OrderForCancellation); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	contractForCancellation.SetRequestType("delete")
-	ob.PushContractIntoQueue(contractForCancellation)
+	OrderForCancellation.SetRequestType("delete")
+	ob.PushOrderIntoQueue(OrderForCancellation)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 
@@ -74,20 +74,20 @@ func CancelOrder(c *gin.Context) {
 
 // ModifyOrder handles modifying an existing order
 func ModifyOrder(c *gin.Context) {
-	var contractForModification models.Contract
-	if err := c.BindJSON(&contractForModification); err != nil {
+	var OrderForModification models.Order
+	if err := c.BindJSON(&OrderForModification); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	contractForModification.SetRequestType("modify")
-	ob.PushContractIntoQueue(contractForModification)
+	OrderForModification.SetRequestType("modify")
+	ob.PushOrderIntoQueue(OrderForModification)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})
 }
 
 // GetLastTrades returns the current state of the order book
 func GetLastTrades(c *gin.Context) {
-	_n := c.Param("noOfContracts")
+	_n := c.Param("noOfOrders")
 	n := helpers.ConvertStringToInt(_n)
 	lastTradedPrices := ob.GetLastTrades(n)
 	if len(lastTradedPrices) != 0 {
@@ -99,26 +99,3 @@ func GetLastTrades(c *gin.Context) {
 	}
 }
 
-// GetTopOfOrderBook gets the top ask and bid level details
-//func GetTopOfOrderBook(c *gin.Context) {
-//	topOfOrderBook := ob.GetTopOfOrderBook()
-//	if len(topOfOrderBook) == 0 {
-//		c.JSON(http.StatusOK, gin.H{"message": "No orders in the system"})
-//		return
-//	} else if len(topOfOrderBook) == 1 {
-//		firstLevel := topOfOrderBook[0]
-//		if firstLevel.Type {
-//			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_ask": firstLevel})
-//		} else {
-//			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_bid": firstLevel})
-//		}
-//	} else {
-//		firstLevel := topOfOrderBook[0]
-//		secondLevel := topOfOrderBook[1]
-//		if firstLevel.Type {
-//			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_ask": firstLevel, "top_bid": secondLevel})
-//		} else {
-//			c.JSON(http.StatusOK, gin.H{"message": "Top of the order book", "top_bid": firstLevel, "top_ask": secondLevel})
-//		}
-//	}
-//}

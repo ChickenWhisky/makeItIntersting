@@ -1,8 +1,9 @@
 package models
 
-// Contract struct represents an order (buy/sell)
-type Contract struct {
-	ContractID  string  `json:"contract_id"`
+// Order struct represents an order (buy/sell)
+type Order struct {
+	OrderID  string  `json:"Order_id"`
+	EventID     string  `json:"event_id"`
 	UserID      string  `json:"user_id"`
 	RequestType string  `json:"request_type"`
 	OrderType   string  `json:"order_type"`
@@ -11,77 +12,84 @@ type Contract struct {
 	Timestamp   int64   `json:"timestamp"`
 }
 
-// NewContract creates a new instance of Contract
-func NewContract() *Contract {
-	return &Contract{}
+// NewOrder creates a new instance of Order
+func NewOrder() *Order {
+	return &Order{}
 }
 
-// SetContractID sets the contract ID of the contract
-func (c *Contract) SetContractID(ID string) {
-	c.ContractID = ID
+// SetOrderID sets the Order ID of the Order
+func (o *Order) SetOrderID(ID string) {
+	o.OrderID = ID
 }
 
-// GetContractID returns the contract ID of the contract
-func (c *Contract) GetContractID() string {
-	return c.ContractID
+// GetOrderID returns the Order ID of the Order
+func (o *Order) GetOrderID() string {
+	return o.OrderID
 }
 
-// SetUserID sets the user ID of the contract
-func (c *Contract) SetUserID(ID string) {
-	c.UserID = ID
+// SetUserID sets the user ID of the Order
+func (o *Order) SetUserID(ID string) {
+	o.UserID = ID
 }
 
-// GetUserID returns the user ID of the contract
-func (c *Contract) GetUserID() string {
-	return c.UserID
+// GetUserID returns the user ID of the Order
+func (o *Order) GetUserID() string {
+	return o.UserID
 }
 
-// SetRequestType sets the request type of the contract
-func (c *Contract) SetRequestType(rt string) {
-	c.RequestType = rt
+// SetRequestType sets the request type of the Order
+func (o *Order) SetRequestType(rt string) {
+	o.RequestType = rt
 }
 
-// GetRequestType returns the request type of the contract
-func (c *Contract) GetRequestType() string {
-	return c.RequestType
+// GetRequestType returns the request type of the Order
+func (o *Order) GetRequestType() string {
+	return o.RequestType
 }
 
-// SetOrderType sets the order type of the contract
-func (c *Contract) SetOrderType(orderType string) {
-	c.OrderType = orderType
+// SetOrderType sets the order type of the Order
+func (o *Order) SetOrderType(orderType string) {
+	o.OrderType = orderType
 }
 
-// GetOrderType returns the order type of the contract
-func (c *Contract) GetOrderType() string {
-	return c.OrderType
+// GetOrderType returns the order type of the Order
+func (o *Order) GetOrderType() string {
+	return o.OrderType
 }
 
-// SetPrice sets the price of the contract
-func (c *Contract) SetPrice(price float32) {
-	c.Price = price
+// SetPrice sets the price of the Order
+func (o *Order) SetPrice(price float32) {
+	o.Price = price
 }
 
-// GetPrice returns the price of the contract
-func (c *Contract) GetPrice() float32 {
-	return c.Price
+// GetPrice returns the price of the Order
+func (o *Order) GetPrice() float32 {
+	return o.Price
 }
 
-// SetQuantity sets the quantity of the contract
-func (c *Contract) SetQuantity(quantity int64) {
-	c.Quantity = quantity
+// SetQuantity sets the quantity of the Order
+func (o *Order) SetQuantity(quantity int64) {
+	o.Quantity = quantity
 }
 
-// GetQuantity returns the quantity of the contract
-func (c *Contract) GetQuantity() int64 {
-	return c.Quantity
+// GetQuantity returns the quantity of the Order
+func (o *Order) GetQuantity() int64 {
+	return o.Quantity
 }
 
-// SetTimestamp sets the timestamp of the contract
-func (c *Contract) SetTimestamp(timestamp int64) {
-	c.Timestamp = timestamp
+// SetTimestamp sets the timestamp of the Order
+func (o *Order) SetTimestamp(timestamp int64) {
+	o.Timestamp = timestamp
 }
 
-// GetTimestamp returns the timestamp of the contract
-func (c *Contract) GetTimestamp() int64 {
-	return c.Timestamp
+// GetTimestamp returns the timestamp of the Order
+func (o *Order) GetTimestamp() int64 {
+	return o.Timestamp
+}
+
+func (o *Order) SetEventID(event string) {
+	o.EventID = event
+}
+func (o *Order) GetEventID() string {
+	return o.EventID
 }

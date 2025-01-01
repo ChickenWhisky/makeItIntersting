@@ -9,16 +9,17 @@ import (
 	"time"
 )
 
-func (ob *OrderBook) LogHandler(lowestAskContract *models.Contract, highestBidContract *models.Contract) {
+func (ob *OrderBook) LogHandler(lowestAskOrder *models.Order, highestBidOrder *models.Order) {
 	// Log the trade
 	trade := models.Trade{
 		TradeID:          strconv.Itoa(ob.TradeNo),
-		SellerUserID:     lowestAskContract.UserID,
-		SellerContractID: lowestAskContract.ContractID,
-		BuyerUserID:      highestBidContract.UserID,
-		BuyerContractID:  highestBidContract.ContractID,
-		Price:            lowestAskContract.Price,
-		Quantity:         min(lowestAskContract.Quantity, highestBidContract.Quantity),
+		EventID:		  lowestAskOrder.EventID,
+		SellerUserID:     lowestAskOrder.UserID,
+		SellerOrderID: lowestAskOrder.OrderID,
+		BuyerUserID:      highestBidOrder.UserID,
+		BuyerOrderID:  highestBidOrder.OrderID,
+		Price:            lowestAskOrder.Price,
+		Quantity:         min(lowestAskOrder.Quantity, highestBidOrder.Quantity),
 		Timestamp:        time.Now().UnixMilli(),
 	}
 	ob.TradeNo++

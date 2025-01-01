@@ -16,12 +16,12 @@ type OrderBook struct {
 	Bids              *models.OrderQueue          // OrderQueue for Bids
 	LimitAsks         *models.OrderQueue          // OrderQueue for LimitAsks
 	LimitBids         *models.OrderQueue          // OrderQueue for LimitBids
-	IncomingContracts chan models.Contract        // Channel to stream incoming orders
+	IncomingOrders chan models.Order        // Channel to stream incoming orders
 	CompletedTrades   chan models.Trade           // Channel to stream incoming orders
-	Orders            map[string]*models.Contract // A map to extract any existing order
+	Orders            map[string]*models.Order // A map to extract any existing order
 	LastMatchedPrices []models.Trade              // Struct to keep track of last matched prices
 	Lock              sync.Mutex                  // Mutex (Maybe removed if not required)
-	ContractNo        int                         // reference number to create ContractIDs
+	OrderNo        int                         // reference number to create OrderIDs
 	TradeNo           int                         // reference number to create TradeIDs
 }
 
@@ -32,12 +32,12 @@ func NewOrderBook() *OrderBook {
 		Bids:              models.NewOrderQueue(),
 		LimitAsks:         models.NewOrderQueue(),
 		LimitBids:         models.NewOrderQueue(),
-		IncomingContracts: make(chan models.Contract),
+		IncomingOrders: make(chan models.Order),
 		CompletedTrades:   make(chan models.Trade),
-		Orders:            make(map[string]*models.Contract),
+		Orders:            make(map[string]*models.Order),
 		LastMatchedPrices: make([]models.Trade, 0),
 		Lock:              sync.Mutex{},
-		ContractNo:        0,
+		OrderNo:        0,
 		TradeNo:           0,
 	}
 	ob.StartProcessingOrders()
@@ -45,145 +45,145 @@ func NewOrderBook() *OrderBook {
 	return ob
 }
 
-// StartProcessingTrades tarts up a thread that continuously checks the channel for new contracts to process
+// StartProcessingTrades tarts up a thread that continuously checks the channel for new Orders to process
 func (ob *OrderBook) StartProcessingTrades() {
 	go func() {
-		for contract := range ob.IncomingContracts {
-			contract.SetTimestamp(time.Now().UnixMilli())
-			log.Printf("Processing contract: %+v", contract)
-			switch contract.RequestType {
+		for Order := range ob.IncomingOrders {
+			Order.SetTimestamp(time.Now().UnixMilli())
+			log.Printf("Processing Order: %+v", Order)
+			switch Order.RequestType {
 			case "add":
-				if err := ob.AddContract(&contract); err != nil {
-					log.Printf("Error adding contract: %v", err)
+				if err := ob.AddOrder(&Order); err != nil {
+					log.Printf("Error adding Order: %v", err)
 				}
 			case "delete":
-				if err := ob.CancelContract(&contract); err != nil {
-					log.Printf("Error deleting contract: %v", err)
+				if err := ob.CancelOrder(&Order); err != nil {
+					log.Printf("Error deleting Order: %v", err)
 				}
 			default:
-				log.Printf("Unknown request type: %s", contract.RequestType)
+				log.Printf("Unknown request type: %s", Order.RequestType)
 			}
 		}
 	}()
 }
 
-// StartProcessingOrders tarts up a thread that continuously checks the channel for new contracts to process
+// StartProcessingOrders starts up a thread that continuously checks the channel for new Orders to process
 func (ob *OrderBook) StartProcessingOrders() {
 	go func() {
-		for contract := range ob.IncomingContracts {
-			contract.SetTimestamp(time.Now().UnixMilli())
-			log.Printf("Processing contract: %+v", contract)
-			switch contract.RequestType {
+		for Order := range ob.IncomingOrders {
+			Order.SetTimestamp(time.Now().UnixMilli())
+			log.Printf("Processing Order: %+v", Order)
+			switch Order.RequestType {
 			case "add":
-				if err := ob.AddContract(&contract); err != nil {
-					log.Printf("Error adding contract: %v", err)
+				if err := ob.AddOrder(&Order); err != nil {
+					log.Printf("Error adding Order: %v", err)
 				}
 			case "delete":
-				if err := ob.CancelContract(&contract); err != nil {
-					log.Printf("Error deleting contract: %v", err)
+				if err := ob.CancelOrder(&Order); err != nil {
+					log.Printf("Error deleting Order: %v", err)
 				}
 			case "modify":
-				if err := ob.ModifyContract(&contract); err != nil {
-					log.Printf("Error modifying contract: %v", err)
+				if err := ob.ModifyOrder(&Order); err != nil {
+					log.Printf("Error modifying Order: %v", err)
 				}
 			default:
-				log.Printf("Unknown request type: %s", contract.RequestType)
+				log.Printf("Unknown request type: %s", Order.RequestType)
 			}
 		}
 	}()
 }
 
-func (ob *OrderBook) PushContractIntoQueue(contract models.Contract) {
-	ob.IncomingContracts <- contract
+func (ob *OrderBook) PushOrderIntoQueue(Order models.Order) {
+	ob.IncomingOrders <- Order
 }
 
-// AddContract adds a new contract (order) to the order book and attempts to match orders.
-func (ob *OrderBook) AddContract(contract *models.Contract) error {
+// AddOrder adds a new Order (order) to the order book and attempts to match orders.
+func (ob *OrderBook) AddOrder(Order *models.Order) error {
 
-	//contract.ContractID = helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("CONTRACT_ID_LENGTH")))
+	//Order.OrderID = helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("Order_ID_LENGTH")))
 
-	newContractID := strconv.Itoa(ob.ContractNo)
-	contract.ContractID = newContractID
-	ob.ContractNo++
-	switch contract.OrderType {
+	newOrderID := strconv.Itoa(ob.OrderNo)
+	Order.OrderID = newOrderID
+	ob.OrderNo++
+	switch Order.OrderType {
 	case "sell":
 
-		err := ob.Asks.Push(contract)
+		err := ob.Asks.Push(Order)
 		if err != nil {
-			log.Printf("Error pushing contract into Asks: %v", err)
+			log.Printf("Error pushing Order into Asks: %v", err)
 		}
-		log.Printf("Pushed contract into Asks: %+v", contract)
+		log.Printf("Pushed Order into Asks: %+v", Order)
 	case "buy":
-		err := ob.Bids.Push(contract)
+		err := ob.Bids.Push(Order)
 		if err != nil {
-			log.Printf("Error pushing contract into Bids: %v", err)
+			log.Printf("Error pushing Order into Bids: %v", err)
 		}
-		log.Printf("Pushed contract into Bids: %+v", contract)
+		log.Printf("Pushed Order into Bids: %+v", Order)
 	case "limit_sell":
-		err := ob.LimitAsks.Push(contract)
+		err := ob.LimitAsks.Push(Order)
 		if err != nil {
-			log.Printf("Error pushing contract into LimitAsks: %v", err)
+			log.Printf("Error pushing Order into LimitAsks: %v", err)
 		}
-		log.Printf("Pushed contract into LimitAsks: %+v", contract)
+		log.Printf("Pushed Order into LimitAsks: %+v", Order)
 	case "limit_buy":
-		err := ob.LimitBids.Push(contract)
+		err := ob.LimitBids.Push(Order)
 		if err != nil {
-			log.Printf("Error pushing contract into LimitBids: %v", err)
+			log.Printf("Error pushing Order into LimitBids: %v", err)
 		}
-		log.Printf("Pushed contract into LimitBids: %+v", contract)
+		log.Printf("Pushed Order into LimitBids: %+v", Order)
 	default:
 		return errors.New("invalid order type")
 	}
 
 	// Store the user's orders
-	ob.Orders[contract.ContractID] = contract
+	ob.Orders[Order.OrderID] = Order
 	// Attempt to match orders after adding a new one
 	ob.MatchOrders()
 	return nil
 }
 
-// CancelContract cancels a specific user's contract.
-func (ob *OrderBook) CancelContract(contract *models.Contract) error {
+// CancelOrder cancels a specific user's Order.
+func (ob *OrderBook) CancelOrder(Order *models.Order) error {
 
-	// Data required to cancel a given contract
-	// Contract_ID
+	// Data required to cancel a given Order
+	// Order_ID
 	// User_ID
-	// From the Contract_ID alone we can get the info like price and from there we can
+	// From the Order_ID alone we can get the info like price and from there we can
 	// easily access the required LevelBook and then delete the data accordingly
 
 	// First check if Order Exists
-	orderInSystem, ok := ob.Orders[contract.ContractID]
-	if ok && orderInSystem.UserID == contract.GetUserID() {
-		log.Infof("Order found in the system : %v", contract.GetContractID())
-		switch contract.OrderType {
+	orderInSystem, ok := ob.Orders[Order.OrderID]
+	if ok && orderInSystem.UserID == Order.GetUserID() {
+		log.Infof("Order found in the system : %v", Order.GetOrderID())
+		switch Order.OrderType {
 		case "buy":
-			ob.Asks.Delete(contract.GetContractID())
-			_, err := ob.Asks.Find(contract.GetContractID())
+			ob.Asks.Delete(Order.GetOrderID())
+			_, err := ob.Asks.Find(Order.GetOrderID())
 			if err == nil {
-				log.Printf("CONTRACT DELETION ERROR : %v", err)
+				log.Printf("Order DELETION ERROR : %v", err)
 			}
-			log.Printf("CONTRACT DELETION SUCCESS")
+			log.Printf("Order DELETION SUCCESS")
 		case "sell":
-			ob.Bids.Delete(contract.GetContractID())
-			_, err := ob.Bids.Find(contract.GetContractID())
+			ob.Bids.Delete(Order.GetOrderID())
+			_, err := ob.Bids.Find(Order.GetOrderID())
 			if err == nil {
-				log.Printf("CONTRACT DELETION ERROR : %v", err)
+				log.Printf("Order DELETION ERROR : %v", err)
 			}
-			log.Printf("CONTRACT DELETION SUCCESS")
+			log.Printf("Order DELETION SUCCESS")
 		case "limit_buy":
-			ob.LimitBids.Delete(contract.GetContractID())
-			_, err := ob.LimitBids.Find(contract.GetContractID())
+			ob.LimitBids.Delete(Order.GetOrderID())
+			_, err := ob.LimitBids.Find(Order.GetOrderID())
 			if err == nil {
-				log.Printf("CONTRACT DELETION ERROR : %v", err)
+				log.Printf("Order DELETION ERROR : %v", err)
 			}
-			log.Printf("CONTRACT DELETION SUCCESS")
+			log.Printf("Order DELETION SUCCESS")
 		case "limit_sell":
-			ob.LimitAsks.Delete(contract.GetContractID())
-			_, err := ob.LimitAsks.Find(contract.GetContractID())
+			ob.LimitAsks.Delete(Order.GetOrderID())
+			_, err := ob.LimitAsks.Find(Order.GetOrderID())
 			if err == nil {
-				log.Printf("CONTRACT DELETION ERROR : %v", err)
+				log.Printf("Order DELETION ERROR : %v", err)
 			}
-			log.Printf("CONTRACT DELETION SUCCESS")
+			log.Printf("Order DELETION SUCCESS")
 		default:
 			{
 				return errors.New("invalid order type")
@@ -193,50 +193,50 @@ func (ob *OrderBook) CancelContract(contract *models.Contract) error {
 		log.Printf("Order doesnt exist in the system")
 		return errors.New("order doesnt exist in the system")
 	} else {
-		log.Printf("Order doesnt belong to the user : %v", contract.UserID)
+		log.Printf("Order doesnt belong to the user : %v", Order.UserID)
 		return errors.New("order doesnt belong to the user")
 	}
 
 	// Try matching remaining elements on deletion
-	delete(ob.Orders, contract.GetContractID())
+	delete(ob.Orders, Order.GetOrderID())
 	ob.MatchOrders()
 
 	return nil
 
 }
 
-// ModifyContract cancels a specific user's contract and then adds a new contract based on the updated modifications.
-func (ob *OrderBook) ModifyContract(contract *models.Contract) error {
+// ModifyOrder cancels a specific user's Order and then adds a new Order based on the updated modifications.
+func (ob *OrderBook) ModifyOrder(Order *models.Order) error {
 
-	switch contract.OrderType {
+	switch Order.OrderType {
 	case "buy":
-		c, err := ob.Bids.Find(contract.ContractID)
+		c, err := ob.Bids.Find(Order.OrderID)
 		if err != nil {
 			return err
 		}
-		c.SetPrice(contract.GetPrice())
-		c.SetQuantity(contract.GetQuantity())
+		c.SetPrice(Order.GetPrice())
+		c.SetQuantity(Order.GetQuantity())
 	case "sell":
-		c, err := ob.Asks.Find(contract.ContractID)
+		c, err := ob.Asks.Find(Order.OrderID)
 		if err != nil {
 			return err
 		}
-		c.SetPrice(contract.GetPrice())
-		c.SetQuantity(contract.GetQuantity())
+		c.SetPrice(Order.GetPrice())
+		c.SetQuantity(Order.GetQuantity())
 	case "limit_buy":
-		c, err := ob.LimitBids.Find(contract.ContractID)
+		c, err := ob.LimitBids.Find(Order.OrderID)
 		if err != nil {
 			return err
 		}
-		c.SetPrice(contract.GetPrice())
-		c.SetQuantity(contract.GetQuantity())
+		c.SetPrice(Order.GetPrice())
+		c.SetQuantity(Order.GetQuantity())
 	case "limit_sell":
-		c, err := ob.LimitAsks.Find(contract.ContractID)
+		c, err := ob.LimitAsks.Find(Order.OrderID)
 		if err != nil {
 			return err
 		}
-		c.SetPrice(contract.GetPrice())
-		c.SetQuantity(contract.GetQuantity())
+		c.SetPrice(Order.GetPrice())
+		c.SetQuantity(Order.GetQuantity())
 	default:
 		return errors.New("invalid order type")
 	}

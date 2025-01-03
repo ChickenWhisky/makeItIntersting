@@ -37,10 +37,20 @@ func SetUpCors(router *gin.Engine, web_url string) {
 	}))
 }
 func SetupRoutes(router *gin.Engine) {
+
+	// Admin endpoints
+	router.POST("/admin/event", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"message": "To be implemented"}) }) // Creates a new event
+	router.PUT("/admin/event")                                                                                         // Modify an existing event
+	router.DELETE("/admin/event")
+
+	// User endpoints
 	router.POST("/order", CreateOrder)
 	router.PUT("/order", ModifyOrder)
 	router.DELETE("/order", CancelOrder)
 	router.GET("/trades/:noOfOrders", GetLastTrades)
+	router.GET("/event")  // Get details about a specific event
+	router.GET("/events") // Get list of all current events
+
 	//router.GET("/top/", GetTopOfOrderBook)
 }
 
@@ -52,7 +62,7 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 	Order.SetRequestType("add")
-	Order.SetTimestamp(time.Now().UnixMilli()) 
+	Order.SetTimestamp(time.Now().UnixMilli())
 	ob.PushOrderIntoQueue(Order)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "Order": Order})
@@ -98,4 +108,3 @@ func GetLastTrades(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "No trades in the system"})
 	}
 }
-

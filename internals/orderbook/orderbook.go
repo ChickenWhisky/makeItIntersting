@@ -12,17 +12,17 @@ import (
 // OrderBook stores order data and handles order processing.
 
 type OrderBook struct {
-	Asks              *models.OrderQueue          // OrderQueue for Asks
-	Bids              *models.OrderQueue          // OrderQueue for Bids
-	LimitAsks         *models.OrderQueue          // OrderQueue for LimitAsks
-	LimitBids         *models.OrderQueue          // OrderQueue for LimitBids
-	IncomingOrders chan models.Order        // Channel to stream incoming orders
-	CompletedTrades   chan models.Trade           // Channel to stream incoming orders
+	Asks              *models.OrderQueue       // OrderQueue for Asks
+	Bids              *models.OrderQueue       // OrderQueue for Bids
+	LimitAsks         *models.OrderQueue       // OrderQueue for LimitAsks
+	LimitBids         *models.OrderQueue       // OrderQueue for LimitBids
+	IncomingOrders    chan models.Order        // Channel to stream incoming orders
+	CompletedTrades   chan models.Trade        // Channel to stream incoming orders
 	Orders            map[string]*models.Order // A map to extract any existing order
-	LastMatchedPrices []models.Trade              // Struct to keep track of last matched prices
-	Lock              sync.Mutex                  // Mutex (Maybe removed if not required)
-	OrderNo        int                         // reference number to create OrderIDs
-	TradeNo           int                         // reference number to create TradeIDs
+	LastMatchedPrices []models.Trade           // Struct to keep track of last matched prices
+	Lock              sync.Mutex               // Mutex (Maybe removed if not required)
+	OrderNo           int                      // reference number to create OrderIDs
+	TradeNo           int                      // reference number to create TradeIDs
 }
 
 // NewOrderBook creates a new empty order book.
@@ -32,12 +32,12 @@ func NewOrderBook() *OrderBook {
 		Bids:              models.NewOrderQueue(),
 		LimitAsks:         models.NewOrderQueue(),
 		LimitBids:         models.NewOrderQueue(),
-		IncomingOrders: make(chan models.Order),
+		IncomingOrders:    make(chan models.Order),
 		CompletedTrades:   make(chan models.Trade),
 		Orders:            make(map[string]*models.Order),
 		LastMatchedPrices: make([]models.Trade, 0),
 		Lock:              sync.Mutex{},
-		OrderNo:        0,
+		OrderNo:           0,
 		TradeNo:           0,
 	}
 	ob.StartProcessingOrders()

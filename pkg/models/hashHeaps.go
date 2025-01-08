@@ -9,9 +9,9 @@ import (
 )
 
 type OrderQueue struct {
-	heap        *priorityqueue.Queue
-	orders      map[string]*Order // Maps IDs to the Order
-	toBeDeleted map[string]*Order // Keeps track of IDs to be deleted
+	heap        *priorityqueue.Queue //  Priority Queue to store the Orders
+	orders      map[string]*Order    // Maps IDs to the Order
+	toBeDeleted map[string]*Order    // Keeps track of IDs to be deleted
 	noOfOrders  int                  // Size of number of orders (Not Orders)
 }
 

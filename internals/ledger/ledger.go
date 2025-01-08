@@ -3,6 +3,7 @@ package ledger
 import (
 	"time"
 
+	"github.com/ChickenWhisky/makeItIntersting/internals/events"
 	"github.com/ChickenWhisky/makeItIntersting/internals/orderbook"
 )
 
@@ -10,7 +11,7 @@ import (
 
 
 type Ledger struct {
-	Events map[string]*Event
+	Events map[string]*events.Event
 }
 
 func newLedger() *Ledger {

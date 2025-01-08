@@ -1,2 +1,2 @@
-{"trade_id":"","seller_user_id":"0","seller_contract_id":"2","buyer_user_id":"0","buyer_contract_id":"0","price":11,"quantity":11,"timestamp":1735596988560}
-{"trade_id":"","seller_user_id":"0","seller_contract_id":"3","buyer_user_id":"0","buyer_contract_id":"1","price":11,"quantity":11,"timestamp":1735596998146}
+("trade_id":"","seller_user_id":"0","seller_contract_id":"2","buyer_user_id":"0","buyer_contract_id":"0","price":11,"quantity":11,"timestamp":1735596988560)
+("trade_id":"","seller_user_id":"0","seller_contract_id":"3","buyer_user_id":"0","buyer_contract_id":"1","price":11,"quantity":11,"timestamp":1735596998146)

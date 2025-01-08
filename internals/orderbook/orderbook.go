@@ -205,6 +205,8 @@ func (ob *OrderBook) CancelOrder(Order *models.Order) error {
 
 }
 
+
+// ISSUE TO BE FIXED POTENTIAL SITUATION WHERE ORDER CANT BE DELETED BUT DUE TO IMPLEMENTATION ANOTHER ORDER IS ADDED
 // ModifyOrder cancels a specific user's Order and then adds a new Order based on the updated modifications.
 func (ob *OrderBook) ModifyOrder(Order *models.Order) error {
 

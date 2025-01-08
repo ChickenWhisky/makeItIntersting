@@ -2,7 +2,7 @@ package models
 
 // Order struct represents an order (buy/sell)
 type Order struct {
-	OrderID  string  `json:"Order_id"`
+	OrderID     string  `json:"Order_id"`
 	EventID     string  `json:"event_id"`
 	UserID      string  `json:"user_id"`
 	RequestType string  `json:"request_type"`

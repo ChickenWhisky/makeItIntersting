@@ -16,7 +16,6 @@ type Event struct {
 	SubEvents      map[string]*subevents.SubEvent // map it based on SubEventID
 	ContractVolume int                            // Metrics for number of contracts issued in the event
 	TraderVolume   int                            // Metrics for number of traders in the event
-	ValueVolume    int                            // Metrics for number of traders in the event
 }
 
 func NewEvents(en string, SubEventNames []string) (*Event, error) {
@@ -41,50 +40,9 @@ func NewEvents(en string, SubEventNames []string) (*Event, error) {
 
 	}
 	return &Event{
-		EventName: en,
-	},nil
-}
-
-func (e *Event) GetSubEvents() map[string]*subevents.SubEvent {
-	return e.SubEvents
-}
-
-func (e *Event) GetEventID() string {
-	return e.EventID
-}
-
-func (e *Event) SetEventID(eventID string) {
-	e.EventID = eventID
-}
-
-func (e *Event) GetEventInfo() string {
-	return e.EventInfo
-}
-
-func (e *Event) SetEventInfo(eventInfo string) {
-	e.EventInfo = eventInfo
-}
-
-func (e *Event) GetContractVolume() int {
-	return e.ContractVolume
-}
-
-func (e *Event) SetContractVolume(contractVolume int) {
-	e.ContractVolume = contractVolume
-}
-
-func (e *Event) GetTraderVolume() int {
-	return e.TraderVolume
-}
-
-func (e *Event) SetTraderVolume(traderVolume int) {
-	e.TraderVolume = traderVolume
-}
-
-func (e *Event) GetValueVolume() int {
-	return e.ValueVolume
-}
-
-func (e *Event) SetValueVolume(valueVolume int) {
-	e.ValueVolume = valueVolume
+		EventName:      en,
+		SubEvents:      m,
+		ContractVolume: 0,
+		TraderVolume:   0,
+	}, nil
 }

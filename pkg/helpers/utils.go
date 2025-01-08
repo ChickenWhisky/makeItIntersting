@@ -62,7 +62,7 @@ func ValidateSubEventName(input string) error {
 	if strings.HasSuffix(input, "_YES") || strings.HasSuffix(input, "_NO") {
 		// Extract the prefix (the part before _YES or _NO)
 		prefix := input[:len(input)-4]
-		
+
 		// Ensure the prefix is non-empty and consists of valid characters
 		if len(prefix) > 0 && isAlphanumeric(prefix) {
 			return nil

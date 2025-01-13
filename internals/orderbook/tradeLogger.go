@@ -14,6 +14,7 @@ func (ob *OrderBook) LogHandler(lowestAskOrder *models.Order, highestBidOrder *m
 	trade := models.Trade{
 		TradeID:       strconv.Itoa(ob.TradeNo),
 		EventID:       lowestAskOrder.EventID,
+		SubEventID:    lowestAskOrder.SubEventID,
 		SellerUserID:  lowestAskOrder.UserID,
 		SellerOrderID: lowestAskOrder.OrderID,
 		BuyerUserID:   highestBidOrder.UserID,
@@ -24,7 +25,8 @@ func (ob *OrderBook) LogHandler(lowestAskOrder *models.Order, highestBidOrder *m
 	}
 	ob.TradeNo++
 	ob.LastMatchedPrices = append(ob.LastMatchedPrices, trade)
-	file, err := os.OpenFile("trades.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    fileName := "trades_" + lowestAskOrder.EventID + "_" + lowestAskOrder.SubEventID + ".txt"
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Printf("Error opening file: %s", err)
 		return

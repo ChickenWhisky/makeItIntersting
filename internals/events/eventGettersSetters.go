@@ -1,7 +1,5 @@
 package events
 
-import subevents "github.com/ChickenWhisky/makeItIntersting/internals/SubEvents"
-
 // GetEventName returns the name of the event.
 func (e *Event) GetEventName() string {
 	return e.EventName
@@ -13,8 +11,12 @@ func (e *Event) SetEventName(en string) {
 }
 
 // GetSubEvents returns the sub-events associated with the event.
-func (e *Event) GetSubEvents() map[string]*subevents.SubEvent {
-	return e.SubEvents
+func (e *Event) GetSubEventNames() []string {
+	names := make([]string, 0, len(e.SubEvents))
+	for _, subEvent := range e.SubEvents {
+		names = append(names,subEvent.GetSubEventName())
+	}
+	return names
 }
 
 // GetEventID returns the ID of the event.

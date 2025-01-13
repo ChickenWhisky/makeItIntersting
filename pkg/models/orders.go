@@ -2,8 +2,9 @@ package models
 
 // Order struct represents an order (buy/sell)
 type Order struct {
-	OrderID     string  `json:"Order_id"`
+	OrderID     string  `json:"order_id"`
 	EventID     string  `json:"event_id"`
+	SubEventID  string  `json:"subevent_id"`
 	UserID      string  `json:"user_id"`
 	RequestType string  `json:"request_type"`
 	OrderType   string  `json:"order_type"`
@@ -91,5 +92,12 @@ func (o *Order) SetEventID(event string) {
 	o.EventID = event
 }
 func (o *Order) GetEventID() string {
+	return o.EventID
+}
+
+func (o *Order) SetSubEventID(event string) {
+	o.SubEventID = event
+}
+func (o *Order) GetSubEventID() string {
 	return o.EventID
 }

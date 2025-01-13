@@ -7,6 +7,7 @@ import (
 
 	"github.com/ChickenWhisky/makeItIntersting/internals/SubEvents"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
+	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 )
 
 type Event struct {
@@ -40,9 +41,23 @@ func NewEvents(en string, SubEventNames []string) (*Event, error) {
 
 	}
 	return &Event{
+		EventID:        helpers.HashText(en),
 		EventName:      en,
 		SubEvents:      m,
 		ContractVolume: 0,
 		TraderVolume:   0,
 	}, nil
+}
+
+// SubmitOrder submits an order to the respective SubEvent
+func (e *Event) SubmitOrder(o models.Order) error {
+
+	// Check if the SubEvent exists
+	if e.SubEvents[o.GetSubEventID()] == nil {
+		return errors.New("SubEvent doesn't exist")
+	}
+
+	// Submit the order to the respective SubEvent
+	e.SubEvents[o.GetSubEventID()].SubmitOrder(o)
+	return nil
 }

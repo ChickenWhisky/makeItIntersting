@@ -4,6 +4,7 @@ package models
 type Trade struct {
 	TradeID       string  `json:"trade_id"`
 	EventID       string  `json:"event_id"`
+	SubEventID    string  `json:"sub_event_id"`
 	SellerUserID  string  `json:"seller_user_id"`
 	SellerOrderID string  `json:"seller_Order_id"`
 	BuyerUserID   string  `json:"buyer_user_id"`

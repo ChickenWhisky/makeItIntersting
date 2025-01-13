@@ -39,7 +39,6 @@ func PriceTimeBased(a, b interface{}) int {
 			if A.GetPrice() < B.GetPrice() {
 				return -1
 			}
-
 		}
 	}
 	return 0

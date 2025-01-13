@@ -64,6 +64,11 @@ func SetupRoutes(router *gin.Engine) {
 }
 
 // GetEvents handles getting a list of all current events
+
+
+// IMPLEMENT THIS FUNCTION 
+// MAKE SURE TO RETURN THE SUBEVENT ID
+
 func GetEvents(c *gin.Context) {
 	events := l.GetEvents()
 	c.JSON(http.StatusOK, gin.H{"Events": events})

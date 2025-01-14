@@ -56,8 +56,8 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/admin/event", CreateEvent) // Create a new event
 
 	// IMPLEMENT EDITING AN EVENT
-	router.PUT("/admin/event")               // Modify an event
-	router.DELETE("/admin/event")            // Delete an event
+	router.PUT("/admin/event", ModifyEvent) // Modify an event
+	router.DELETE("/admin/event")           // Delete an event
 
 	// SubEvent endpoints
 	router.POST("/admin/subevent")   // Create a new subevent
@@ -66,28 +66,42 @@ func SetupRoutes(router *gin.Engine) {
 }
 
 // GetEvents handles getting a list of all current events
+// GetEvents handles getting a list of all current events
+// @Summary Get list of all current events
+// @Description Get list of all current events along with their subevents
+// @Tags events
+// @Produce json
+// @Success 200 {array} events.EventSummary
+// @Router /events [get]
 func GetEvents(c *gin.Context) {
 	events := l.GetEvents()
 	c.JSON(http.StatusOK, gin.H{"Events": events})
 }
 
 // GetEvent handles getting details about a specific event
+// @Summary Get details about a specific event
+// @Description Get details about a specific event along with its subevents
+// @Tags events
+// @Accept json
+// @Produce json
+// @Success 200 {object} []events.EventSummary
+// @Router /event [get]
 func GetEvent(c *gin.Context) {
-	
+
 	// Expected JSON format:
 	// {
 	// 	"event_id": "EventID"
 	// }
-	
+
 	type TempEvent struct {
 		EventID string `json:"event_id"`
 	}
 	var tempEvent TempEvent
-	
+
 	if err := c.BindJSON(&tempEvent); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
-	
+
 	// Get the event summary
 	eventSummary, err := l.GetEvent(tempEvent.EventID)
 	if err != nil {
@@ -98,7 +112,57 @@ func GetEvent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"Event": eventSummary})
 }
 
+// ModifyEvent handles modifying an existing event such as the name, info NOT THE SUBEVENTS
+// @Summary Modify an existing event
+// @Description Modify an existing event such as the name, info NOT THE SUBEVENTS
+// @Tags events
+// @Accept json
+// @Produce json
+// @Router /admin/event [put]
+func ModifyEvent(c *gin.Context) {
+	// Expected JSON format:
+	// {
+	// 	"event_id": "EventID",
+	// 	"event_name": "New Event Name",
+	// 	"event_info": "New Event Info"
+	// }
+
+	type TempEvent struct {
+		EventID   string `json:"event_id"`
+		EventName string `json:"event_name"`
+		EventInfo string `json:"event_info"`
+	}
+	var tempEvent TempEvent
+
+	if err := c.BindJSON(&tempEvent); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	// Get the event
+	event, eventExists := l.Events[tempEvent.EventID]
+	if !eventExists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event doesn't exist"})
+		return
+	}
+
+	// Modify the event
+	if tempEvent.EventName != "" {
+		event.SetEventName(tempEvent.EventName)
+	}
+	if tempEvent.EventInfo != "" {
+		event.SetEventInfo(tempEvent.EventInfo)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Event modified successfully"})
+}
+
 // CreateEvent handles creating a new event
+// @Summary Create a new event
+// @Description Create a new event with subevents
+// @Tags events
+// @Accept json
+// @Produce json
+// @Router /admin/event [post]
 func CreateEvent(c *gin.Context) {
 	// Expected JSON format:
 	// {
@@ -138,6 +202,13 @@ func CreateEvent(c *gin.Context) {
 }
 
 // CreateOrder handles creating a new order
+// @Summary Create a new order
+// @Description Create a new order for a specific event and subevent
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param order body models.Order true "Order details"
+// @Router /order [post]
 func CreateOrder(c *gin.Context) {
 	// Expected JSON format:
 	// {
@@ -167,6 +238,13 @@ func CreateOrder(c *gin.Context) {
 }
 
 // CancelOrder handles canceling an existing order
+// @Summary Cancel an existing order
+// @Description Cancel an existing order for a specific event and subevent
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param order body models.Order true "Order details"
+// @Router /order [delete]
 func CancelOrder(c *gin.Context) {
 	// Expected JSON format:
 	// {
@@ -190,6 +268,13 @@ func CancelOrder(c *gin.Context) {
 }
 
 // ModifyOrder handles modifying an existing order
+// @Summary Modify an existing order
+// @Description Modify an existing order for a specific event and subevent
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param order body models.Order true "Order details"
+// @Router /order [put]
 func ModifyOrder(c *gin.Context) {
 
 	// Expected JSON format:
@@ -232,6 +317,14 @@ type GetLastTradesInput struct {
 }
 
 // GetLastTrades returns the current state of the order book
+// GetLastTrades returns the current state of the order book
+// @Summary Get the last n trades for a given event and subevent
+// @Description Get the last n trades for a given event and subevent
+// @Tags trades
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Trade
+// @Router /trades [get]
 func GetLastTrades(c *gin.Context) {
 
 	// Expected JSON format:

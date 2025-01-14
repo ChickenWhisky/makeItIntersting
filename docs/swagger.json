@@ -3,5 +3,316 @@
     "info": {
         "contact": {}
     },
-    "paths": {}
+    "paths": {
+        "/admin/event": {
+            "put": {
+                "description": "Modify an existing event such as the name, info NOT THE SUBEVENTS",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Modify an existing event",
+                "responses": {}
+            },
+            "post": {
+                "description": "Create a new event with subevents",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Create a new event",
+                "responses": {}
+            }
+        },
+        "/event": {
+            "get": {
+                "description": "Get details about a specific event along with its subevents",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get details about a specific event",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/events.EventSummary"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events": {
+            "get": {
+                "description": "Get list of all current events along with their subevents",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get list of all current events",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/events.EventSummary"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/order": {
+            "put": {
+                "description": "Modify an existing order for a specific event and subevent",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Modify an existing order",
+                "parameters": [
+                    {
+                        "description": "Order details",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Order"
+                        }
+                    }
+                ],
+                "responses": {}
+            },
+            "post": {
+                "description": "Create a new order for a specific event and subevent",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Create a new order",
+                "parameters": [
+                    {
+                        "description": "Order details",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Order"
+                        }
+                    }
+                ],
+                "responses": {}
+            },
+            "delete": {
+                "description": "Cancel an existing order for a specific event and subevent",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Cancel an existing order",
+                "parameters": [
+                    {
+                        "description": "Order details",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Order"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/trades": {
+            "get": {
+                "description": "Get the last n trades for a given event and subevent",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "trades"
+                ],
+                "summary": "Get the last n trades for a given event and subevent",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Trade"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "events.EventSummary": {
+            "type": "object",
+            "properties": {
+                "eventID": {
+                    "description": "ID used to identify all events in Ledger as well as used in contracts",
+                    "type": "string"
+                },
+                "eventName": {
+                    "description": "A simple title for the event?",
+                    "type": "string"
+                },
+                "subEvents": {
+                    "description": "A map of subevents in the event",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/subevents.SubEventSummary"
+                    }
+                }
+            }
+        },
+        "models.Order": {
+            "type": "object",
+            "required": [
+                "price",
+                "quantity"
+            ],
+            "properties": {
+                "event_id": {
+                    "type": "string"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "order_type": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "request_type": {
+                    "type": "string"
+                },
+                "subevent_id": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Trade": {
+            "type": "object",
+            "required": [
+                "price",
+                "quantity"
+            ],
+            "properties": {
+                "buyer_Order_id": {
+                    "type": "string"
+                },
+                "buyer_user_id": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "seller_Order_id": {
+                    "type": "string"
+                },
+                "seller_user_id": {
+                    "type": "string"
+                },
+                "sub_event_id": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "trade_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "subevents.SubEventSummary": {
+            "type": "object",
+            "properties": {
+                "contractVolume": {
+                    "description": "Metrics for number of contracts issued in the event",
+                    "type": "integer"
+                },
+                "subEventEnd": {
+                    "description": "NOT_FINAL",
+                    "type": "string"
+                },
+                "subEventName": {
+                    "description": "A simple title for the event?",
+                    "type": "string"
+                },
+                "subEventStart": {
+                    "description": "NOT_FINAL",
+                    "type": "string"
+                },
+                "traderVolume": {
+                    "description": "Metrics for number of traders in the event",
+                    "type": "integer"
+                },
+                "valueVolume": {
+                    "description": "Metrics for number of traders in the event",
+                    "type": "integer"
+                }
+            }
+        }
+    }
 }

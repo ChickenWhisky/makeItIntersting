@@ -39,6 +39,7 @@ func SetUpCors(router *gin.Engine, web_url string) {
 		MaxAge: 12 * time.Hour,
 	}))
 }
+
 func SetupRoutes(router *gin.Engine) {
 
 	// User endpoints
@@ -145,7 +146,12 @@ func CreateOrder(c *gin.Context) {
 	Order.SetRequestType("add")
 	Order.SetTimestamp(time.Now().UnixMilli())
 
-	l.SubmitOrder(Order)
+	err := l.SubmitOrder(Order)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "Order": Order})
 }
@@ -158,7 +164,11 @@ func CancelOrder(c *gin.Context) {
 		return
 	}
 	OrderForCancellation.SetRequestType("delete")
-	l.SubmitOrder(OrderForCancellation)
+	err := l.SubmitOrder(OrderForCancellation)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 
 }
@@ -171,8 +181,12 @@ func ModifyOrder(c *gin.Context) {
 		return
 	}
 	OrderForModification.SetRequestType("modify")
-	l.SubmitOrder(OrderForModification)
-
+	err := l.SubmitOrder(OrderForModification)
+	
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})
 }
 

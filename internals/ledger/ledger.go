@@ -18,7 +18,7 @@ func NewLedger() *Ledger {
 	}
 }
 
-func (l *Ledger) addEvent(e string, subEvents []string) {
+func (l *Ledger) AddEvent(e string, subEvents []string) {
 	// Create a new event
 	_, err := l.Events[e]
 	if err {
@@ -60,7 +60,8 @@ func (l *Ledger) SubmitOrder(o models.Order) error {
 
 type EventSummary struct {
 	EventID   string
-	SubEvents []string
+	EventName string
+	SubEvents [][]string
 }
 
 func (l *Ledger) GetEvent(e string) (EventSummary, error) {
@@ -71,21 +72,32 @@ func (l *Ledger) GetEvent(e string) (EventSummary, error) {
 	}
 	var summary EventSummary
 	summary.EventID = e
-	summary.SubEvents = event.GetSubEventNames()
+	summary.EventName = event.EventName
+
+	// Subevents is a 2D array in which each row contains the subevent ID and the name of the subevent
+	var subEventNames []string = event.GetSubEventNames()
+	var subEventIDs []string = event.GetSubEventIDs()
+
+	summary.SubEvents = make([][]string, 2, len(subEventNames))
+	for i:=0; i<len(subEventNames);i++{
+		summary.SubEvents = append(summary.SubEvents, []string{subEventIDs[i], subEventNames[i]})
+	}
+
 	return summary, nil
 }
 
 
 
-func (l *Ledger) GetEvents() map[string]*EventSummary {
+func (l *Ledger) GetEvents() []EventSummary {
 	// returns only event_id and a list of subevents in a struct
 	
-	summaries := make(map[string]*EventSummary)
+	var summaries []EventSummary
 	for id, event := range l.Events {
-		summaries[id] = &EventSummary{
+		summaries = append(summaries, EventSummary{
 			EventID:   id,
-			SubEvents: event.GetSubEventNames(),
-		}
+			EventName: event.EventName,
+			SubEvents: event.GetSubEventsNameID(),
+		})
 	}
 	return summaries
 

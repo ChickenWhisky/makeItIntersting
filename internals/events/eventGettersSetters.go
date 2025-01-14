@@ -58,3 +58,23 @@ func (e *Event) GetTraderVolume() int {
 func (e *Event) SetTraderVolume(traderVolume int) {
 	e.TraderVolume = traderVolume
 }
+
+// GetSubEventIDs returns the IDs of the sub-events associated with the event.
+func (e *Event) GetSubEventIDs() []string {
+	ids := make([]string, 0, len(e.SubEvents))
+	for _, subEvent := range e.SubEvents {
+		ids = append(ids, subEvent.GetSubEventID())
+	}
+	return ids
+}
+
+// GetSubEventNameID returns the names and IDs of the sub-events associated with the event.	
+func (e *Event) GetSubEventsNameID() [][]string {
+	var subEventNames []string = e.GetSubEventNames()
+	var subEventIDs []string = e.GetSubEventIDs()
+	subEventNameID := make([][]string, 2, len(subEventNames))
+	for i:=0; i<len(subEventNames);i++{
+		subEventNameID = append(subEventNameID, []string{subEventIDs[i], subEventNames[i]})
+	}
+	return subEventNameID
+}

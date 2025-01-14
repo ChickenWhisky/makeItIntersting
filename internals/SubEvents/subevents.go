@@ -1,6 +1,7 @@
 package subevents
 
 import (
+	"errors"
 	"log"
 	"time"
 
@@ -32,10 +33,11 @@ func NewSubEvent(SubEventID string, name string, curTime time.Time, Yes bool) *S
 
 }
 
-func (s *SubEvent) SubmitOrder(o models.Order) {
+func (s *SubEvent) SubmitOrder(o models.Order) error {
 	if time.Now().After(s.SubEventExpiry) {
 		log.Printf("SubEvent has expired")
-		return
+		return errors.New("SubEvent has expired")
 	}
 	s.OrderBook.PushOrderIntoQueue(o)
+	return nil
  }

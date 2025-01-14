@@ -99,5 +99,5 @@ func (o *Order) SetSubEventID(event string) {
 	o.SubEventID = event
 }
 func (o *Order) GetSubEventID() string {
-	return o.EventID
+	return o.SubEventID
 }

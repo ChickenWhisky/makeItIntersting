@@ -2,6 +2,7 @@ package events
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -53,11 +54,19 @@ func NewEvents(en string, SubEventNames []string) (*Event, error) {
 func (e *Event) SubmitOrder(o models.Order) error {
 
 	// Check if the SubEvent exists
-	if e.SubEvents[o.GetSubEventID()] == nil {
+	_, ok := e.SubEvents[o.GetSubEventID()]
+	if !ok {
+		fmt.Print(e.SubEvents[o.GetSubEventID()])
+		log.Printf("SubEvent doesn't exist")
 		return errors.New("SubEvent doesn't exist")
 	}
 
+
 	// Submit the order to the respective SubEvent
-	e.SubEvents[o.GetSubEventID()].SubmitOrder(o)
+	err := e.SubEvents[o.GetSubEventID()].SubmitOrder(o)
+	if err != nil {
+		log.Printf("Error in submitting order : %v", err)
+		return err
+	}
 	return nil
 }

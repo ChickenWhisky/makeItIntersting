@@ -1,11 +1,20 @@
 package subevents
 
 import (
+	
 	"time"
 
 	"github.com/ChickenWhisky/makeItIntersting/internals/orderbook"
 )
 
+type SubEventSummary struct {
+	SubEventName   string    // A simple title for the event?
+	SubEventStart  time.Time // NOT_FINAL
+	SubEventEnd    time.Time // NOT_FINAL
+	ContractVolume int       // Metrics for number of contracts issued in the event
+	TraderVolume   int       // Metrics for number of traders in the event
+	ValueVolume    int       // Metrics for number of traders in the event
+}
 func (s *SubEvent) GetSubEventID() string {
 	return s.SubEventID
 }
@@ -60,4 +69,39 @@ func (s *SubEvent) GetSubEventInfo() string {
 
 func (s *SubEvent) SetSubEventInfo(info string) {
 	s.SubEventInfo = info
+}
+
+func (s *SubEvent) GetContractVolume() int {
+	return s.ContractVolume
+}	
+
+func (s *SubEvent) SetContractVolume(contractVolume int) {
+	s.ContractVolume = contractVolume
+}
+
+func (s *SubEvent) GetTraderVolume() int {
+	return s.TraderVolume
+}
+
+func (s *SubEvent) SetTraderVolume(traderVolume int) {
+	s.TraderVolume = traderVolume
+}
+
+func (s *SubEvent) GetValueVolume() int {
+	return s.ValueVolume
+}
+
+func (s *SubEvent) SetValueVolume(valueVolume int) {
+	s.ValueVolume = valueVolume
+}
+
+func (s *SubEvent) Summary() SubEventSummary {
+	return SubEventSummary{
+		SubEventName:   s.GetSubEventName(),
+		SubEventStart:  s.GetSubEventStart(),
+		SubEventEnd:    s.GetSubEventExpiry(),
+		ContractVolume: s.GetContractVolume(),
+		TraderVolume:   s.GetTraderVolume(),
+		ValueVolume:    s.GetValueVolume(),
+	}
 }

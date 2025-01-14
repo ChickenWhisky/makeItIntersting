@@ -88,16 +88,22 @@ func (o *Order) GetTimestamp() int64 {
 	return o.Timestamp
 }
 
+// SetEventID sets the event ID of the Order
 func (o *Order) SetEventID(event string) {
 	o.EventID = event
 }
+
+// GetEventID returns the event ID of the Order
 func (o *Order) GetEventID() string {
 	return o.EventID
 }
 
+// SetSubEventID sets the subevent ID of the Order
 func (o *Order) SetSubEventID(event string) {
 	o.SubEventID = event
 }
+
+// GetSubEventID returns the subevent ID of the Order
 func (o *Order) GetSubEventID() string {
 	return o.SubEventID
 }

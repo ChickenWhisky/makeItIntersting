@@ -19,14 +19,23 @@ type Event struct {
 	ContractVolume int                            // Metrics for number of contracts issued in the event
 	TraderVolume   int                            // Metrics for number of traders in the event
 }
+type EventSummary struct {
+	EventID   string                               // ID used to identify all events in Ledger as well as used in contracts
+	EventName string                               // A simple title for the event?
+	SubEvents map[string]subevents.SubEventSummary // A map of subevents in the event
+}
 
 func NewEvents(en string, SubEventNames []string) (*Event, error) {
+
+	// Create a map to store SubEvents
 	m := make(map[string]*subevents.SubEvent)
 	t := time.Now()
+
 	if len(SubEventNames)%2 != 0 {
 		return nil, errors.New("every SubEvent should have a corresponding YES/NO SubEvent")
 	}
 
+	// Create SubEvents for the Event and validate names
 	for _, s := range SubEventNames {
 		err := helpers.ValidateSubEventName(s)
 		if err == nil {
@@ -61,12 +70,12 @@ func (e *Event) SubmitOrder(o models.Order) error {
 		return errors.New("SubEvent doesn't exist")
 	}
 
-
 	// Submit the order to the respective SubEvent
 	err := e.SubEvents[o.GetSubEventID()].SubmitOrder(o)
 	if err != nil {
 		log.Printf("Error in submitting order : %v", err)
 		return err
 	}
+
 	return nil
 }

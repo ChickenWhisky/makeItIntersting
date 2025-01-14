@@ -43,19 +43,18 @@ func SetUpCors(router *gin.Engine, web_url string) {
 func SetupRoutes(router *gin.Engine) {
 
 	// User endpoints
-	router.POST("/order", CreateOrder)
-	router.PUT("/order", ModifyOrder)
-	router.DELETE("/order", CancelOrder)
-	router.GET("/trades", GetLastTrades)
-	router.GET("/event", GetEvent)   // Get details about a specific event
-	router.GET("/events", GetEvents) // Get list of all current events
-	router.GET("/subevents")         // Get list of all subevents in an event
-	router.GET("/subevent")          // Get details about a specific subevent
+	router.POST("/order", CreateOrder)   // Create a new order
+	router.PUT("/order", ModifyOrder)    // Modify an existing order
+	router.DELETE("/order", CancelOrder) //	Delete an order
+	router.GET("/trades", GetLastTrades) // Get the last n trades for a given event and subevent
+	router.GET("/event", GetEvent)       // Get details about a specific event along with its subevents
+	router.GET("/events", GetEvents)     // Get list of all current events along with their subevents
 
 	// Admin endpoints
 
 	// Event endpoints
 	router.POST("/admin/event", CreateEvent) // Create a new event
+	router.PUT("/admin/event")               // Modify an event
 	router.DELETE("/admin/event")            // Delete an event
 
 	// SubEvent endpoints
@@ -65,11 +64,6 @@ func SetupRoutes(router *gin.Engine) {
 }
 
 // GetEvents handles getting a list of all current events
-
-
-// IMPLEMENT THIS FUNCTION 
-// MAKE SURE TO RETURN THE SUBEVENT ID
-
 func GetEvents(c *gin.Context) {
 	events := l.GetEvents()
 	c.JSON(http.StatusOK, gin.H{"Events": events})
@@ -77,17 +71,22 @@ func GetEvents(c *gin.Context) {
 
 // GetEvent handles getting details about a specific event
 func GetEvent(c *gin.Context) {
+	
 	// Expected JSON format:
 	// {
 	// 	"event_id": "EventID"
 	// }
+	
 	type TempEvent struct {
 		EventID string `json:"event_id"`
 	}
 	var tempEvent TempEvent
+	
 	if err := c.BindJSON(&tempEvent); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
+	
+	// Get the event summary
 	eventSummary, err := l.GetEvent(tempEvent.EventID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -138,6 +137,16 @@ func CreateEvent(c *gin.Context) {
 
 // CreateOrder handles creating a new order
 func CreateOrder(c *gin.Context) {
+	// Expected JSON format:
+	// {
+	// 	"event_id": "EventID",
+	// 	"subevent_id": "SubEventID",
+	// 	"user_id": "UserID",
+	// 	"order_type": "OrderType",
+	// 	"price": 100.0,
+	// 	"quantity": 10
+	// }
+
 	var Order models.Order
 	if err := c.BindJSON(&Order); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -152,12 +161,17 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 
-
 	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "Order": Order})
 }
 
 // CancelOrder handles canceling an existing order
 func CancelOrder(c *gin.Context) {
+	// Expected JSON format:
+	// {
+	// 	"order_id": "OrderID"
+	//  "event_id": "EventID",
+	// 	"subevent_id": "SubEventID",
+	// }
 	var OrderForCancellation models.Order
 	if err := c.BindJSON(&OrderForCancellation); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -175,18 +189,36 @@ func CancelOrder(c *gin.Context) {
 
 // ModifyOrder handles modifying an existing order
 func ModifyOrder(c *gin.Context) {
+
+	// Expected JSON format:
+	// {
+	// 	"order_id": "OrderID",
+	// 	"event_id": "EventID",
+	// 	"subevent_id": "SubEventID",
+	// 	"price": 100.0,
+	// 	"quantity": 10
+	// }
+
 	var OrderForModification models.Order
+
+	// Bind the input to the Order struct
 	if err := c.BindJSON(&OrderForModification); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	OrderForModification.SetRequestType("modify")
+
+	// Submit the modified order
 	err := l.SubmitOrder(OrderForModification)
-	
+
+	// Handle errors
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Return success message
 	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})
 }
 
@@ -200,6 +232,14 @@ type GetLastTradesInput struct {
 // GetLastTrades returns the current state of the order book
 func GetLastTrades(c *gin.Context) {
 
+	// Expected JSON format:
+	// {
+	// 	"no_of_orders": 10,
+	// 	"event_id": "EventID",
+	// 	"subevent_id": "SubEventID"
+	// }
+
+	// Bind the input to the GetLastTradesInput struct
 	var GetLastTradesInput GetLastTradesInput
 	if err := c.BindJSON(&GetLastTradesInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -212,15 +252,21 @@ func GetLastTrades(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Event doesn't exist"})
 		return
 	}
+
+	// Getting the proper subevent
 	subEvent, subEventExists := event.SubEvents[GetLastTradesInput.SubEventID]
 	if !subEventExists {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "SubEvent doesn't exist"})
 		return
 	}
+
+	// Getting the order book
+
 	ob := subEvent.OrderBook
 
 	n := GetLastTradesInput.NoOfOrders
 	lastTradedPrices := ob.GetLastTrades(n)
+
 	if len(lastTradedPrices) != 0 {
 		for _, trade := range lastTradedPrices {
 			c.JSON(http.StatusOK, trade)

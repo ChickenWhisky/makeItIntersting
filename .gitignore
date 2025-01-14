@@ -6,6 +6,5 @@ docker-compose.yml
 main
 .air.toml
 tmp
-trades.txt
 .gitignore
-makeItIntersting
+*.txt

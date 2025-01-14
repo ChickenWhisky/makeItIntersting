@@ -22,7 +22,7 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() error {
 				}
 				topLimitAsks.SetOrderType("sell")
 				topLimitAsks.SetTimestamp(time.Now().UnixMilli())
-				ob.AddContract(topLimitAsks)
+				ob.AddOrder(topLimitAsks)
 			}
 		}
 	}
@@ -37,7 +37,7 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() error {
 				}
 				topLimitBids.SetOrderType("buy")
 				topLimitBids.SetTimestamp(time.Now().UnixMilli())
-				ob.AddContract(topLimitBids)
+				ob.AddOrder(topLimitBids)
 			}
 		}
 	}
@@ -45,7 +45,7 @@ func (ob *OrderBook) AddLimitOrdersToOrderBook() error {
 	return nil
 }
 
-// MergeTopPrices takes and merges contracts in the top of the ask books and the bid books
+// MergeTopPrices takes and merges Orders in the top of the ask books and the bid books
 func (ob *OrderBook) MergeTopPrices() error {
 	log.Info("Starting Function: MergeTopPrices")
 	lowestAskPrice := ob.Asks.TopPrice()
@@ -54,7 +54,7 @@ func (ob *OrderBook) MergeTopPrices() error {
 
 	if lowestAskPrice == -1 || highestBidPrice == -1 {
 		log.Infof("Ask Price: %v, Bid Price: %v", lowestAskPrice, highestBidPrice)
-		return errors.New("No contracts to merge")
+		return errors.New("No Orders to merge")
 	}
 
 	log.Infof("Ask Price: %v, Bid Price: %v", lowestAskPrice, highestBidPrice)
@@ -68,26 +68,26 @@ func (ob *OrderBook) MergeTopPrices() error {
 		if err1 != nil || err2 != nil {
 			return err1
 		}
-		var NoOfcontracts int64 = 0
+		var NoOfOrders int64 = 0
 		if _lowestAsk.GetQuantity() == _highestBid.GetQuantity() {
 			lowestAsk, _ := ob.Asks.Pop()
 			highestBid, _ := ob.Bids.Pop()
-			NoOfcontracts = _lowestAsk.GetQuantity()
+			NoOfOrders = _lowestAsk.GetQuantity()
 			ob.LogHandler(lowestAsk, highestBid)
 		} else if _lowestAsk.GetQuantity() < _highestBid.GetQuantity() {
 			lowestAsk, _ := ob.Asks.Pop()
 			highestBid, _ := ob.Bids.Top()
-			NoOfcontracts = lowestAsk.GetQuantity()
+			NoOfOrders = lowestAsk.GetQuantity()
 			highestBid.SetQuantity(highestBid.GetQuantity() - lowestAsk.GetQuantity())
 			ob.LogHandler(lowestAsk, highestBid)
 		} else {
 			lowestAsk, _ := ob.Asks.Top()
 			highestBid, _ := ob.Bids.Pop()
-			NoOfcontracts = highestBid.GetQuantity()
+			NoOfOrders = highestBid.GetQuantity()
 			lowestAsk.SetQuantity(lowestAsk.GetQuantity() - highestBid.GetQuantity())
 			ob.LogHandler(lowestAsk, highestBid)
 		}
-		log.Printf("\nAsk_Price : %v\n Bid_Price : %v\n Contracts : %v", _lowestAsk.GetPrice(), _highestBid.GetPrice(), NoOfcontracts)
+		log.Printf("\nAsk_Price : %v\n Bid_Price : %v\n Orders : %v", _lowestAsk.GetPrice(), _highestBid.GetPrice(), NoOfOrders)
 	}
 	log.Info("Ending Function: MergeTopPrices")
 	return nil

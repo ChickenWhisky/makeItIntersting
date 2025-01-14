@@ -22,15 +22,22 @@ type SubEvent struct {
 	ValueVolume    int                  // Metrics for number of traders in the event
 }
 
-func NewSubEvent(SubEventID string, name string, curTime time.Time, Yes bool) *SubEvent {
-	return &SubEvent{
-		SubEventID:    SubEventID,
-		SubEventName:  name,
-		OrderBook:     orderbook.NewOrderBook(),
-		SubEventStart: curTime,
-		Yes:           Yes,
+func NewSubEvent(SubEventID string, name string, curTime time.Time, Yes bool, expiryTime ...time.Time) *SubEvent {
+	var expTime time.Time
+	if len(expiryTime) > 0 {
+		expTime = expiryTime[0]
+	} else {
+		expTime = curTime.Add(24 * time.Hour)
 	}
 
+	return &SubEvent{
+		SubEventID:     SubEventID,
+		SubEventName:   name,
+		OrderBook:      orderbook.NewOrderBook(),
+		SubEventStart:  curTime,
+		SubEventExpiry: expTime,
+		Yes:            Yes,
+	}
 }
 
 func (s *SubEvent) SubmitOrder(o models.Order) error {

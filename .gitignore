@@ -7,5 +7,4 @@ main
 .air.toml
 tmp
 .gitignore
-makeItIntersting
 *.txt

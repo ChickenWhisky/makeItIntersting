@@ -1,15 +1,17 @@
 package handlers
 
 import (
+	"log"
+	"net/http"
+	"time"
+
+	subevents "github.com/ChickenWhisky/makeItIntersting/internals/SubEvents"
 	"github.com/ChickenWhisky/makeItIntersting/internals/events"
 	"github.com/ChickenWhisky/makeItIntersting/internals/ledger"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/helpers"
 	"github.com/ChickenWhisky/makeItIntersting/pkg/models"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"log"
-	"net/http"
-	"time"
 )
 
 // Create a global order book instance
@@ -58,12 +60,57 @@ func SetupRoutes(router *gin.Engine) {
 	router.DELETE("/admin/event")           // Delete an event
 
 	// SubEvent endpoints
-	router.POST("/admin/subevent")   // Create a new subevent
-	router.PUT("/admin/subevent" , ModifySubEvent)   // Modify a subevent
-	router.DELETE("/admin/subevent") // Delete a subevent
+	router.POST("/admin/subevent", CreateSubevent)                // Create a new subevent
+	router.PUT("/admin/subevent", ModifySubEvent) // Modify a subevent
+	router.DELETE("/admin/subevent")              // Delete a subevent
 
 }
 
+// CreateSubevent handles creating a new subevent
+// @Summary Create a new subevent
+// @Description Create a new subevent for a specific event
+// @Tags subevents
+// @Accept json
+// @Produce json
+// @Router /admin/subevent [post]
+func CreateSubevent(c *gin.Context) {
+	// Expected JSON format:
+	// {
+	// 	"event_id": "EventID",
+	// 	"subevent_name": "SubEvent Name",
+	// 	"subevent_info": "SubEvent Info",
+	// 	"subevent_expiry": "SubEvent Expiry"
+	// }
+
+	type TempSubEvent struct {
+		EventID        string `json:"event_id"`
+		SubEventName   string `json:"subevent_name"`
+		SubEventInfo   string `json:"subevent_info"`
+		SubEventExpiry string `json:"subevent_expiry"`
+	}
+
+	var tempSubEvent TempSubEvent
+
+	if err := c.BindJSON(&tempSubEvent); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	subEventExpiry, err := time.Parse(time.RFC3339, tempSubEvent.SubEventExpiry)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
+		return
+	}
+
+	// Get the event
+	event, eventExists := l.Events[tempSubEvent.EventID]
+	if !eventExists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event doesn't exist"})
+		return
+	}
+
+	event.AddSubevent([]subevents.SubEvent{*subevents.NewSubEvent("", tempSubEvent.SubEventName, time.Now(), false, subEventExpiry)})
+	c.JSON(http.StatusOK, gin.H{"message": "SubEvent created successfully","subevent_name": tempSubEvent.SubEventName})
+}
 
 // ModifySubEvent handles modifying an existing subevent such as expiry date, name, info
 // @Summary Modify an existing subevent
@@ -82,10 +129,10 @@ func ModifySubEvent(c *gin.Context) {
 	// 	"subevent_expiry": "New SubEvent Expiry"
 	// }
 	type TempSubEvent struct {
-		EventID       string `json:"event_id"`
-		SubEventID    string `json:"subevent_id"`
-		SubEventName  string `json:"subevent_name"`
-		SubEventInfo  string `json:"subevent_info"`
+		EventID        string `json:"event_id"`
+		SubEventID     string `json:"subevent_id"`
+		SubEventName   string `json:"subevent_name"`
+		SubEventInfo   string `json:"subevent_info"`
 		SubEventExpiry string `json:"subevent_expiry"`
 	}
 
@@ -125,12 +172,11 @@ func ModifySubEvent(c *gin.Context) {
 	}
 	if tempSubEvent.SubEventExpiry != "" {
 		subEvent.SetSubEventExpiry(subEventExpiry)
-	subEvent.SetSubEventExpiry(subEventExpiry)
+		subEvent.SetSubEventExpiry(subEventExpiry)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "SubEvent modified successfully"})
 }
-
 
 // GetEvents handles getting a list of all current events
 // @Summary Get list of all current events

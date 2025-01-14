@@ -59,6 +59,32 @@ func NewEvents(en string, SubEventNames []string) (*Event, error) {
 	}, nil
 }
 
+// AddSubevent adds subevents to the event
+func (e *Event) AddSubevent(sl []subevents.SubEvent) error {
+	m := make(map[string]*subevents.SubEvent)
+	
+	if len(sl)%2 != 0 {
+		return errors.New("every SubEvent should have a corresponding YES/NO SubEvent")
+	}
+
+	// Create SubEvents for the Event and validate names
+	for _, s := range sl {
+		err := helpers.ValidateSubEventName(s.SubEventName)
+		if err == nil {
+			yes := false
+			if s.GetSubEventName()[len(s.GetSubEventName())-3:] == "_YES" {
+				yes = true
+			}
+			s.SetYes(yes)
+			s.SubEventID = helpers.HashText(s.SubEventName)
+			m[s.GetSubEventID()] = &s 
+		} else {
+			log.Printf("Error in creating SubEvent : %v", err)
+		}
+
+	}
+	return nil
+}
 // SubmitOrder submits an order to the respective SubEvent
 func (e *Event) SubmitOrder(o models.Order) error {
 

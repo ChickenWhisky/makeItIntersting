@@ -54,6 +54,8 @@ func SetupRoutes(router *gin.Engine) {
 
 	// Event endpoints
 	router.POST("/admin/event", CreateEvent) // Create a new event
+
+	// IMPLEMENT EDITING AN EVENT
 	router.PUT("/admin/event")               // Modify an event
 	router.DELETE("/admin/event")            // Delete an event
 

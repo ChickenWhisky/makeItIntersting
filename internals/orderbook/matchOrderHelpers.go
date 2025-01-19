@@ -80,12 +80,14 @@ func (ob *OrderBook) MergeTopPrices() error {
 			NoOfOrders = lowestAsk.GetQuantity()
 			ob.LogHandler(lowestAsk, highestBid)
 			highestBid.SetQuantity(highestBid.GetQuantity() - lowestAsk.GetQuantity())
+			delete(ob.Orders, lowestAsk.GetOrderID())
 		} else {
 			lowestAsk, _ := ob.Asks.Top()
 			highestBid, _ := ob.Bids.Pop()
 			NoOfOrders = highestBid.GetQuantity()
 			ob.LogHandler(lowestAsk, highestBid)
 			lowestAsk.SetQuantity(lowestAsk.GetQuantity() - highestBid.GetQuantity())
+			delete(ob.Orders, highestBid.GetOrderID())
 		}
 		log.Printf("\nAsk_Price : %v\n Bid_Price : %v\n Orders : %v", _lowestAsk.GetPrice(), _highestBid.GetPrice(), NoOfOrders)
 	}

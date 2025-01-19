@@ -23,7 +23,7 @@ func PriceTimeBased(a, b interface{}) int {
 	A := a.(*Order)
 	B := b.(*Order)
 	if A.GetPrice() == B.GetPrice() {
-		return utils.Int64Comparator(A.GetTimestamp(), B.GetTimestamp())
+		return utils.Int64Comparator(B.GetTimestamp(),A.GetTimestamp() )
 	} else {
 		if A.GetOrderType() == "buy" || A.GetOrderType() == "limit_buy" {
 			if A.GetPrice() < B.GetPrice() {

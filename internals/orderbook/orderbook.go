@@ -55,13 +55,16 @@ func (ob *OrderBook) StartProcessingTrades() {
 			case "add":
 				if err := ob.AddOrder(&Order); err != nil {
 					log.Printf("Error adding Order: %v", err)
+					Order.ErrChan <- err
 				}
 			case "delete":
 				if err := ob.CancelOrder(&Order); err != nil {
-					log.Printf("Error deleting Order: %v", err)
+					log.Printf("Error delPushOrderIntoQueueeting Order: %v", err)
+					Order.ErrChan <- err
 				}
 			default:
 				log.Printf("Unknown request type: %s", Order.RequestType)
+				Order.ErrChan <- errors.New("unknown request type")
 			}
 		}
 	}()
@@ -77,18 +80,24 @@ func (ob *OrderBook) StartProcessingOrders() {
 			case "add":
 				if err := ob.AddOrder(&Order); err != nil {
 					log.Printf("Error adding Order: %v", err)
+					Order.ErrChan <- err
 				}
 			case "delete":
 				if err := ob.CancelOrder(&Order); err != nil {
 					log.Printf("Error deleting Order: %v", err)
+					Order.ErrChan <- err
 				}
 			case "modify":
 				if err := ob.ModifyOrder(&Order); err != nil {
 					log.Printf("Error modifying Order: %v", err)
+					Order.ErrChan <- err
 				}
 			default:
 				log.Printf("Unknown request type: %s", Order.RequestType)
+				Order.ErrChan <- errors.New("unknown request type")
 			}
+			Order.ErrChan <- nil
+			close(Order.ErrChan)
 		}
 	}()
 }
@@ -100,35 +109,36 @@ func (ob *OrderBook) PushOrderIntoQueue(Order models.Order) {
 // AddOrder adds a new Order (order) to the order book and attempts to match orders.
 func (ob *OrderBook) AddOrder(Order *models.Order) error {
 
-	//Order.OrderID = helpers.GenerateRandomString(helpers.ConvertStringToInt(os.Getenv("Order_ID_LENGTH")))
-
 	newOrderID := strconv.Itoa(ob.OrderNo)
 	Order.OrderID = newOrderID
 	ob.OrderNo++
 	switch Order.OrderType {
 	case "sell":
-
 		err := ob.Asks.Push(Order)
 		if err != nil {
 			log.Printf("Error pushing Order into Asks: %v", err)
+			return err
 		}
 		log.Printf("Pushed Order into Asks: %+v", Order)
 	case "buy":
 		err := ob.Bids.Push(Order)
 		if err != nil {
 			log.Printf("Error pushing Order into Bids: %v", err)
+			return err
 		}
 		log.Printf("Pushed Order into Bids: %+v", Order)
 	case "limit_sell":
 		err := ob.LimitAsks.Push(Order)
 		if err != nil {
 			log.Printf("Error pushing Order into LimitAsks: %v", err)
+			return err
 		}
 		log.Printf("Pushed Order into LimitAsks: %+v", Order)
 	case "limit_buy":
 		err := ob.LimitBids.Push(Order)
 		if err != nil {
 			log.Printf("Error pushing Order into LimitBids: %v", err)
+			return err
 		}
 		log.Printf("Pushed Order into LimitBids: %+v", Order)
 	default:
@@ -205,7 +215,6 @@ func (ob *OrderBook) CancelOrder(Order *models.Order) error {
 
 }
 
-
 // ISSUE TO BE FIXED POTENTIAL SITUATION WHERE ORDER CANT BE DELETED BUT DUE TO IMPLEMENTATION ANOTHER ORDER IS ADDED
 // ModifyOrder cancels a specific user's Order and then adds a new Order based on the updated modifications.
 func (ob *OrderBook) ModifyOrder(Order *models.Order) error {
@@ -214,31 +223,76 @@ func (ob *OrderBook) ModifyOrder(Order *models.Order) error {
 	case "buy":
 		c, err := ob.Bids.Find(Order.OrderID)
 		if err != nil {
+			log.Printf("Error Finding Order: %v", err)
+			return err
+		}
+		err = ob.CancelOrder(c)
+		if err != nil {
+			log.Printf("Error Canceling Order: %v", err)
 			return err
 		}
 		c.SetPrice(Order.GetPrice())
 		c.SetQuantity(Order.GetQuantity())
+		err = ob.AddOrder(c)
+		if err != nil {
+			log.Printf("Error adding Order: %v", err)
+			return err
+		}
+
 	case "sell":
 		c, err := ob.Asks.Find(Order.OrderID)
 		if err != nil {
+			log.Printf("Error Finding Order: %v", err)
+			return err
+		}
+		err = ob.CancelOrder(c)
+		if err != nil {
+			log.Printf("Error Canceling Order: %v", err)
 			return err
 		}
 		c.SetPrice(Order.GetPrice())
 		c.SetQuantity(Order.GetQuantity())
+		err = ob.AddOrder(c)
+		if err != nil {
+			log.Printf("Error adding Order: %v", err)
+			return err
+		}
 	case "limit_buy":
 		c, err := ob.LimitBids.Find(Order.OrderID)
 		if err != nil {
+			log.Printf("Error Finding Order: %v", err)
+			return err
+		}
+		err = ob.CancelOrder(c)
+		if err != nil {
+			log.Printf("Error Canceling Order: %v", err)
 			return err
 		}
 		c.SetPrice(Order.GetPrice())
 		c.SetQuantity(Order.GetQuantity())
+		err = ob.AddOrder(c)
+		if err != nil {
+			log.Printf("Error adding Order: %v", err)
+			return err
+		}
 	case "limit_sell":
 		c, err := ob.LimitAsks.Find(Order.OrderID)
 		if err != nil {
+			log.Printf("Error Finding Order: %v", err)
+			return err
+		}
+		err = ob.CancelOrder(c)
+		if err != nil {
+			log.Printf("Error Canceling Order: %v", err)
 			return err
 		}
 		c.SetPrice(Order.GetPrice())
 		c.SetQuantity(Order.GetQuantity())
+		err = ob.AddOrder(c)
+		if err != nil {
+			log.Printf("Error adding Order: %v", err)
+			return err
+		}
 	default:
 		return errors.New("invalid order type")
 	}

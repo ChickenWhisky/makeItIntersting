@@ -55,14 +55,13 @@ func SetupRoutes(router *gin.Engine) {
 	// Event endpoints
 	router.POST("/admin/event", CreateEvent) // Create a new event
 
-	// IMPLEMENT EDITING AN EVENT
 	router.PUT("/admin/event", ModifyEvent) // Modify an event
 	router.DELETE("/admin/event")           // Delete an event
 
 	// SubEvent endpoints
-	router.POST("/admin/subevent", CreateSubevent)                // Create a new subevent
-	router.PUT("/admin/subevent", ModifySubEvent) // Modify a subevent
-	router.DELETE("/admin/subevent")              // Delete a subevent
+	router.POST("/admin/subevent", CreateSubevent) // Create a new subevent
+	router.PUT("/admin/subevent", ModifySubEvent)  // Modify a subevent
+	router.DELETE("/admin/subevent")               // Delete a subevent
 
 }
 
@@ -109,7 +108,7 @@ func CreateSubevent(c *gin.Context) {
 	}
 
 	event.AddSubevent([]subevents.SubEvent{*subevents.NewSubEvent("", tempSubEvent.SubEventName, time.Now(), false, subEventExpiry)})
-	c.JSON(http.StatusOK, gin.H{"message": "SubEvent created successfully","subevent_name": tempSubEvent.SubEventName})
+	c.JSON(http.StatusOK, gin.H{"message": "SubEvent created successfully", "subevent_name": tempSubEvent.SubEventName})
 }
 
 // ModifySubEvent handles modifying an existing subevent such as expiry date, name, info
@@ -337,15 +336,21 @@ func CreateOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	Order.ErrChan = make(chan error,1)
 	Order.SetRequestType("add")
 	Order.SetTimestamp(time.Now().UnixMilli())
-
 	err := l.SubmitOrder(Order)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	
+	err = <-Order.ErrChan
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
 	c.JSON(http.StatusOK, gin.H{"message": "Order created successfully", "Order": Order})
 }
 
@@ -365,6 +370,8 @@ func CancelOrder(c *gin.Context) {
 	// 	"subevent_id": "SubEventID",
 	// }
 	var OrderForCancellation models.Order
+	OrderForCancellation.ErrChan = make(chan error,1)
+
 	if err := c.BindJSON(&OrderForCancellation); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -375,6 +382,12 @@ func CancelOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	err = <-OrderForCancellation.ErrChan
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 
 }
@@ -399,6 +412,7 @@ func ModifyOrder(c *gin.Context) {
 	// }
 
 	var OrderForModification models.Order
+	OrderForModification.ErrChan = make(chan error,1)
 
 	// Bind the input to the Order struct
 	if err := c.BindJSON(&OrderForModification); err != nil {
@@ -406,8 +420,7 @@ func ModifyOrder(c *gin.Context) {
 		return
 	}
 
-	OrderForModification.SetRequestType("modify")
-
+	OrderForModification.SetRequestType("delete")
 	// Submit the modified order
 	err := l.SubmitOrder(OrderForModification)
 
@@ -417,6 +430,26 @@ func ModifyOrder(c *gin.Context) {
 		return
 	}
 
+	// Wait for the order to be deleted
+	err = <-OrderForModification.ErrChan
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	OrderForModification.SetRequestType("add")
+	err = l.SubmitOrder(OrderForModification)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	err = <-OrderForModification.ErrChan
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
 	// Return success message
 	c.JSON(http.StatusOK, gin.H{"message": "Order modified successfully"})
 }

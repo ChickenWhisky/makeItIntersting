@@ -46,7 +46,7 @@ func (s *SubEvent) SubmitOrder(o models.Order) error {
 		log.Printf("SubEvent has expired")
 		return errors.New("SubEvent has expired")
 	}
-	
 	s.OrderBook.PushOrderIntoQueue(o)
+	
 	return nil
  }

@@ -53,7 +53,7 @@ func (l *Ledger) SubmitOrder(o models.Order) error {
 		log.Printf("Error in submitting order ")
 		return errors.New("Event doesn't exist")
 	}
-
+	
 	// Submit the order to the event
 	err := event.SubmitOrder(o)
 	if err != nil {

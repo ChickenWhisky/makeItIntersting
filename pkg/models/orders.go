@@ -2,15 +2,16 @@ package models
 
 // Order struct represents an order (buy/sell)
 type Order struct {
-	OrderID     string  `json:"order_id"`
-	EventID     string  `json:"event_id"`
-	SubEventID  string  `json:"subevent_id"`
-	UserID      string  `json:"user_id"`
-	RequestType string  `json:"request_type"`
-	OrderType   string  `json:"order_type"`
-	Price       float32 `json:"price" binding:"required,gt=0"`
-	Quantity    int64   `json:"quantity" binding:"required,gte=1"`
-	Timestamp   int64   `json:"timestamp"`
+	OrderID     string     `json:"order_id"`
+	EventID     string     `json:"event_id"`
+	SubEventID  string     `json:"subevent_id"`
+	UserID      string     `json:"user_id"`
+	RequestType string     `json:"request_type"`
+	OrderType   string     `json:"order_type"`
+	Price       float32    `json:"price" binding:"required,gt=0"`
+	Quantity    int64      `json:"quantity" binding:"required,gte=1"`
+	Timestamp   int64      `json:"timestamp"`
+	ErrChan     chan error `json:"-"`
 }
 
 // NewOrder creates a new instance of Order
